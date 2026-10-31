@@ -29,15 +29,28 @@ jobs:
       - name: Import and validate project
         shell: pwsh
         run: |
-          & "$env:GODOT_EXE" --headless --editor --path . --quit
-          if ($LASTEXITCODE -ne 0) { throw "Godot project import failed with exit code $LASTEXITCODE" }
+          $log = & "$env:GODOT_EXE" --headless --editor --path . --quit 2>&1
+          $log | ForEach-Object { Write-Host $_ }
+          if ($log -match "SCRIPT ERROR:|Parse Error:|Failed to load script") {
+            throw "Godot reported script/import errors."
+          }
+          if (($LASTEXITCODE -is [int]) -and ($LASTEXITCODE -ne 0)) {
+            throw "Godot project import failed with exit code $LASTEXITCODE"
+          }
       - name: Export Windows executable
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path build -Force | Out-Null
-          & "$env:GODOT_EXE" --headless --path . --export-release "Windows Desktop" build/PIXELBOUND.exe
-          if ($LASTEXITCODE -ne 0) { throw "Windows export failed with exit code $LASTEXITCODE" }
+          $log = & "$env:GODOT_EXE" --headless --path . --export-release "Windows Desktop" build/PIXELBOUND.exe 2>&1
+          $log | ForEach-Object { Write-Host $_ }
+          if ($log -match "ERROR:|Export failed|Failed to") {
+            throw "Godot reported export errors."
+          }
+          if (($LASTEXITCODE -is [int]) -and ($LASTEXITCODE -ne 0)) {
+            throw "Windows export failed with exit code $LASTEXITCODE"
+          }
           if (-not (Test-Path "build/PIXELBOUND.exe")) { throw "PIXELBOUND.exe was not generated." }
+          if ((Get-Item "build/PIXELBOUND.exe").Length -lt 1000000) { throw "PIXELBOUND.exe is unexpectedly small." }
       - uses: actions/upload-artifact@v4
         with:
           name: PIXELBOUND-Windows
