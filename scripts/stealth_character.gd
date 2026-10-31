@@ -41,13 +41,17 @@ func _physics_process(delta:float)->void:
   velocity=Vector3.ZERO
   return
  var horizontal:=float(Input.is_key_pressed(KEY_D))-float(Input.is_key_pressed(KEY_A))
+ var vertical:=float(Input.is_key_pressed(KEY_S))-float(Input.is_key_pressed(KEY_W))
  var crouching:=Input.is_key_pressed(KEY_CTRL)
  var running:=Input.is_key_pressed(KEY_SHIFT) and not crouching
- moving=absf(horizontal)>0.01
+ moving=absf(horizontal)>0.01 or absf(vertical)>0.01
  sneak=crouching
  var speed:=1.0 if crouching else (4.0 if running else 2.2)
- velocity.x=horizontal*speed
- velocity.z=0.0
+ var direction:=Vector2(horizontal, vertical)
+ if direction.length_squared()>1.0:
+  direction=direction.normalized()
+ velocity.x=direction.x*speed
+ velocity.z=direction.y*speed
  if is_on_floor():
   velocity.y=0.0
   if jump_requested:
