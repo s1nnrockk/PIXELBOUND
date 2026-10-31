@@ -6,60 +6,31 @@ on:
 permissions:
   contents: read
 jobs:
-  export-windows:
-    runs-on: windows-latest
+  export:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.3
     steps:
       - uses: actions/checkout@v4
-      - name: Install Godot and export templates
-        shell: pwsh
+      - name: Install Godot export templates
         run: |
-          $version = "4.3"
-          $godotZip = "$env:RUNNER_TEMP\godot.zip"
-          $templatesZip = "$env:RUNNER_TEMP\templates.zip"
-          Invoke-WebRequest "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_win64_console.exe.zip" -OutFile $godotZip
-          Expand-Archive $godotZip "$env:RUNNER_TEMP\godot" -Force
-          $godot = (Get-ChildItem "$env:RUNNER_TEMP\godot" -Filter "Godot_v4.3-stable_win64_console.exe" -Recurse | Select-Object -First 1).FullName
-          if (-not $godot) { throw "Godot executable was not found after extraction." }
-          Invoke-WebRequest "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz" -OutFile $templatesZip
-          Expand-Archive $templatesZip "$env:RUNNER_TEMP\templates" -Force
-          $templateDir = "$env:APPDATA\Godot\export_templates\4.3.stable"
-          New-Item -ItemType Directory -Path $templateDir -Force | Out-Null
-          Copy-Item "$env:RUNNER_TEMP\templates\templates\*" $templateDir -Recurse -Force
-          "GODOT_EXE=$godot" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          wget -q "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz" -O /tmp/godot-templates.tpz
+          mkdir -p /tmp/godot-templates "$HOME/.local/share/godot/export_templates/4.3.stable"
+          unzip -q /tmp/godot-templates.tpz -d /tmp/godot-templates
+          cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/4.3.stable/"
       - name: Import and validate project
-        shell: pwsh
         run: |
-          $log = & "$env:GODOT_EXE" --headless --editor --path . --quit 2>&1
-          $log | ForEach-Object { Write-Host $_ }
-          if ($log -match "SCRIPT ERROR:|Parse Error:|Failed to load script") {
-            throw "Godot reported script/import errors."
-          }
-          if (($LASTEXITCODE -is [int]) -and ($LASTEXITCODE -ne 0)) {
-            throw "Godot project import failed with exit code $LASTEXITCODE"
-          }
+          set -o pipefail
+          godot --headless --editor --path . --quit 2>&1 | tee import.log
+          ! grep -E "SCRIPT ERROR:|Parse Error:|Failed to load script" import.log
       - name: Export Windows executable
-        shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path build -Force | Out-Null
-          $log = & "$env:GODOT_EXE" --headless --path . --export-release "Windows Desktop" "build/PIXELBOUND.exe" 2>&1
-          $exitCode = $LASTEXITCODE
-          $log | ForEach-Object { Write-Host $_ }
-          if ($log -match "ERROR:|Export failed|Failed to") {
-            throw "Godot reported export errors."
-          }
-          if (($exitCode -is [int]) -and ($exitCode -ne 0)) {
-            throw "Windows export failed with exit code $exitCode"
-          }
-          if (-not (Test-Path "build/PIXELBOUND.exe")) {
-            $candidates = Get-ChildItem -Path . -Filter "*.exe" -Recurse -File | Select-Object -ExpandProperty FullName
-            Write-Host "Executable files found: $($candidates -join ', ')"
-            if (Test-Path "PIXELBOUND.exe") {
-              Move-Item "PIXELBOUND.exe" "build/PIXELBOUND.exe" -Force
-            } else {
-              throw "PIXELBOUND.exe was not generated. Godot exit code: $exitCode"
-            }
-          }
-          if ((Get-Item "build/PIXELBOUND.exe").Length -lt 1000000) { throw "PIXELBOUND.exe is unexpectedly small." }
+          set -o pipefail
+          mkdir -p build
+          godot --headless --path . --export-release "Windows Desktop" build/PIXELBOUND.exe 2>&1 | tee export.log
+          ! grep -E "ERROR:|Export failed|Failed to" export.log
+          test -s build/PIXELBOUND.exe
+          test "$(stat -c%s build/PIXELBOUND.exe)" -gt 1000000
       - uses: actions/upload-artifact@v4
         with:
           name: PIXELBOUND-Windows
