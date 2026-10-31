@@ -26,7 +26,7 @@ func _ready()->void:
  add_child(sprite)
  _draw_frame(0)
 func _input(event:InputEvent)->void:
- if event is InputEventKey and event.keycode==KEY_SPACE and event.pressed and not event.echo:
+ if controls_enabled and event is InputEventKey and event.keycode==KEY_SPACE and event.pressed and not event.echo:
   jump_requested=true
 func _process(delta:float)->void:
  anim_time+=delta
