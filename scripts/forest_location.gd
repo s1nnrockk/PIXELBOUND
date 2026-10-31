@@ -211,13 +211,13 @@ func _build_long_trail() -> void:
 		Vector3(42.0, 0.0, -30.0)
 	]
 	for segment in range(waypoints.size() - 1):
-		var a := waypoints[segment]
-		var b := waypoints[segment + 1]
+		var a: Vector3 = waypoints[segment]
+		var b: Vector3 = waypoints[segment + 1]
 		var length := Vector2(b.x - a.x, b.z - a.z).length()
 		var steps := maxi(1, int(ceil(length / PATH_STEP)))
 		for step in range(steps):
 			var t := float(step) / float(steps)
-			var point := a.lerp(b, t)
+			var point: Vector3 = a.lerp(b, t)
 			var direction := Vector2(b.x - a.x, b.z - a.z).normalized()
 			var side := Vector2(-direction.y, direction.x)
 			point.x += side.x * sin(t * PI) * 1.4
