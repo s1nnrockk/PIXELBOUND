@@ -28,7 +28,7 @@ var path_edge_material: StandardMaterial3D
 func _ready() -> void:
 	rng.seed = 9042026
 	character.global_position = Vector3(-4.45, 0.0, -5.1)
-	character.controls_enabled = false
+	character.set("controls_enabled", false)
 	_build_forest()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.size = 5.8
@@ -86,7 +86,7 @@ func _play_house_exit() -> void:
 	zoom.set_ease(Tween.EASE_OUT)
 	zoom.tween_property(camera, "size", 7.6, 1.1)
 	await zoom.finished
-	character.controls_enabled = true
+	character.set("controls_enabled", true)
 	if is_instance_valid(intro_label):
 		intro_label.queue_free()
 
