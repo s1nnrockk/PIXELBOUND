@@ -284,7 +284,7 @@ func _build_long_trail() -> void:
 			var side := Vector2(-direction.y, direction.x)
 			point.x += side.x * sin(t * PI) * 1.4
 			point.z += side.y * sin(t * PI) * 1.4
-				path_points.append(point)
+			path_points.append(point)
 			_register_path_point(point)
 			var tile := MeshInstance3D.new()
 			var tile_mesh := BoxMesh.new()
