@@ -107,7 +107,7 @@ func _make_ambience() -> AudioStreamWAV:
 		sample += sin(TAU * 137.0 * t + 0.3) * 0.008
 		# Sparse, soft bird calls: short frequency sweeps in the upper register.
 		for bird_start in [0.8, 2.7, 5.1, 6.4]:
-			var bird_t := t - bird_start
+			var bird_t: float = t - float(bird_start)
 			if bird_t >= 0.0 and bird_t < 0.34:
 				var envelope := sin(PI * bird_t / 0.34)
 				var frequency := 1700.0 + 900.0 * sin(PI * bird_t / 0.34)
@@ -247,7 +247,7 @@ func _build_menu() -> void:
 
 	menu_root.modulate.a = 0.0
 	menu_root.scale = Vector2(0.96, 0.96)
-	menu_root.pivot_offset = get_viewport_rect().size * 0.5
+	menu_root.pivot_offset = get_viewport().get_visible_rect().size * 0.5
 	var intro := create_tween().set_parallel(true)
 	intro.tween_property(menu_root, "modulate:a", 1.0, 0.8)
 	intro.tween_property(menu_root, "scale", Vector2.ONE, 0.9).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
