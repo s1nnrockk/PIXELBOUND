@@ -8,21 +8,17 @@ permissions:
 jobs:
   export:
     runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.3
     steps:
       - uses: actions/checkout@v4
-      - uses: chickensoft-games/setup-godot@v1
-        with:
-          version: 4.3.0
-          use-dotnet: false
       - name: Import project
         run: godot --headless --editor --path . --quit
       - name: Export Windows
-        run: godot --headless --path . --export-release "Windows Desktop" PIXELBOUND.exe
+        run: godot --headless --path . --export-release "Windows Desktop" build/PIXELBOUND.exe
       - name: Export Linux
-        run: godot --headless --path . --export-release "Linux" PIXELBOUND.x86_64
+        run: godot --headless --path . --export-release "Linux" build/PIXELBOUND.x86_64
       - uses: actions/upload-artifact@v4
         with:
           name: PIXELBOUND-build
-          path: |
-            PIXELBOUND.exe
-            PIXELBOUND.x86_64
+          path: build/
