@@ -1,4 +1,4 @@
-extends Node3D
+extends Node
 
 var time := 0.0
 var warm: OmniLight3D
@@ -9,10 +9,11 @@ var shadow: MeshInstance3D
 var shadow_material: StandardMaterial3D
 
 func _ready() -> void:
-	warm = get_node("WarmLight")
-	cyan = get_node("CyanLight")
-	purple = get_node("PurpleLight")
-	character = get_node("Character")
+	var world := get_parent()
+	warm = world.get_node("WarmLight")
+	cyan = world.get_node("CyanLight")
+	purple = world.get_node("PurpleLight")
+	character = world.get_node("Character")
 
 	shadow = MeshInstance3D.new()
 	shadow.name = "SoftContactShadow"
@@ -45,9 +46,9 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	time += delta
-	warm.position = Vector3(-2.1 + sin(time * 0.7) * 0.8, 1.7, 1.2)
-	cyan.position = Vector3(2.1 + cos(time * 0.55) * 0.7, 1.6, -0.4)
-	purple.position.y = 2.1 + sin(time * 0.9) * 0.35
+	warm.light_energy = 1.45 + sin(time * 3.1) * 0.12
+	cyan.light_energy = 0.48 + sin(time * 1.7) * 0.04
+	purple.light_energy = 0.4 + cos(time * 1.4) * 0.035
 
 	var sneaking := bool(character.get("sneak"))
 	shadow.scale = Vector3(0.82, 0.82, 1.0) if sneaking else Vector3.ONE
