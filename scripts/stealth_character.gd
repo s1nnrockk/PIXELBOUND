@@ -1,6 +1,9 @@
 extends CharacterBody3D
-const W:=24
-const H:=32
+const W:=48
+const H:=64
+const GRAVITY:=18.0
+const JUMP_VELOCITY:=7.2
+var controls_enabled:=true
 var sprite:Sprite3D
 var frame:=0
 var anim_time:=0.0
@@ -13,9 +16,9 @@ func _ready()->void:
  sprite=Sprite3D.new()
  sprite.name="PixelSprite"
  sprite.texture=ImageTexture.create_from_image(image)
- sprite.pixel_size=0.025
+ sprite.pixel_size=0.035
  sprite.billboard=BaseMaterial3D.BILLBOARD_ENABLED
- sprite.shaded=true
+ sprite.shaded=false
  sprite.alpha_cut=SpriteBase3D.ALPHA_CUT_DISCARD
  sprite.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_ON
  add_child(sprite)
@@ -28,7 +31,10 @@ func _process(delta:float)->void:
  else:
   frame=int(anim_time*2.0)%2
  _draw_frame(frame)
-func _physics_process(_delta:float)->void:
+func _physics_process(delta:float)->void:
+ if not controls_enabled:
+  velocity=Vector3.ZERO
+  return
  var horizontal:=float(Input.is_key_pressed(KEY_D))-float(Input.is_key_pressed(KEY_A))
  var crouching:=Input.is_key_pressed(KEY_CTRL)
  var running:=Input.is_key_pressed(KEY_SHIFT) and not crouching
@@ -37,6 +43,12 @@ func _physics_process(_delta:float)->void:
  var speed:=1.0 if crouching else (4.0 if running else 2.2)
  velocity.x=horizontal*speed
  velocity.z=0.0
+ if is_on_floor():
+  velocity.y=0.0
+  if Input.is_key_just_pressed(KEY_SPACE):
+   velocity.y=JUMP_VELOCITY
+ else:
+  velocity.y-=GRAVITY*delta
  move_and_slide()
 func _draw_frame(index:int)->void:
  var image:=Image.create(W,H,false,Image.FORMAT_RGBA8)
@@ -81,8 +93,9 @@ func _draw_frame(index:int)->void:
  _rect(image,3,20+bob+arm,3,2,skin)
  _rect(image,18,20+bob-arm,3,2,skin)
  sprite.texture=ImageTexture.create_from_image(image)
- sprite.position.y=0.42
+ sprite.position.y=1.08
 func _rect(image:Image,x:int,y:int,w:int,h:int,color:Color)->void:
- for px in range(max(0,x),min(W,x+w)):
-  for py in range(max(0,y),min(H,y+h)):
+ var scale_factor:=2
+ for px in range(max(0,x*scale_factor),min(W,(x+w)*scale_factor)):
+  for py in range(max(0,y*scale_factor),min(H,(y+h)*scale_factor)):
    image.set_pixel(px,py,color)
