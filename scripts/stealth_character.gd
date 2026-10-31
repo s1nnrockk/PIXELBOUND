@@ -35,7 +35,7 @@ func _input(event:InputEvent)->void:
   jump_requested=true
 func _process(delta:float)->void:
  anim_time+=delta
- if is_walking:
+ if moving:
   move_time+=delta*(2.8 if sneak else 5.2)
   frame=int(move_time)%4
  else:
