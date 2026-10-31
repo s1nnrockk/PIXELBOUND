@@ -50,5 +50,5 @@ func _process(delta: float) -> void:
 	purple.position.y = 2.1 + sin(time * 0.9) * 0.35
 
 	var sneaking := bool(character.get("sneak"))
-	shadow.scale = Vector3(0.82, 1.0, 0.82) if sneaking else Vector3.ONE
+	shadow.scale = Vector3(0.82, 0.82, 1.0) if sneaking else Vector3.ONE
 	shadow_material.albedo_color.a = 0.62 if sneaking else 0.78
