@@ -85,17 +85,16 @@ func _build_intro_caption() -> void:
 	fade.tween_property(intro_label, "modulate:a", 0.0, 1.0)
 
 func _play_house_exit() -> void:
-	await get_tree().create_timer(0.7).timeout
-	var walk := create_tween()
-	walk.set_trans(Tween.TRANS_SINE)
-	walk.set_ease(Tween.EASE_IN_OUT)
-	walk.tween_property(character, "global_position", Vector3(-4.45, 0.0, 1.6), 2.6)
-	await walk.finished
-	character.global_position = Vector3(-4.45, 0.0, 1.6)
+	# Put the player beyond the porch first; never leave the game dependent on a physics-body tween.
+	await get_tree().create_timer(0.25).timeout
+	character.velocity = Vector3.ZERO
+	character.global_position = Vector3(-4.45, 0.0, 1.85)
+	camera.global_position = character.global_position + camera_origin
+	camera.look_at(character.global_position + Vector3(0.0, 0.9, 0.0), Vector3.UP)
 	var zoom := create_tween()
 	zoom.set_trans(Tween.TRANS_SINE)
 	zoom.set_ease(Tween.EASE_OUT)
-	zoom.tween_property(camera, "size", 7.6, 1.1)
+	zoom.tween_property(camera, "size", 7.6, 0.65)
 	await zoom.finished
 	character.set("controls_enabled", true)
 	if is_instance_valid(intro_label):
@@ -409,7 +408,7 @@ func _build_tree_population() -> void:
 		crowns.append(crown_batch.multimesh)
 	var trunk_transforms := [[], [], [], []]
 	var crown_transforms := [[], [], [], []]
-	for n in range(12000):
+	for n in range(2200):
 		var x := rng.randf_range(-WORLD_HALF, WORLD_HALF)
 		var z := rng.randf_range(-WORLD_HALF, WORLD_HALF)
 		var point := Vector3(x, 0.0, z)
