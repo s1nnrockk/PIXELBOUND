@@ -62,7 +62,7 @@ position = Vector3(-3.6, 2.4, -3.4)
 light_color = Color(1, 0.42, 0.16, 1)
 light_energy = 1.6
 omni_range = 5.5
-shadow_enabled = true
+shadow_enabled = false
 shadow_blur = 2.0
 
 [node name="CyanLight" type="OmniLight3D" parent="."]
