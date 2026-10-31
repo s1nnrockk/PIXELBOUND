@@ -47,6 +47,7 @@ func _build_forest() -> void:
 	_build_watchtower(Vector3(62.0, 0.0, 48.0))
 	_build_camp(Vector3(-48.0, 0.0, 52.0))
 	_build_mushroom_glade(Vector3(18.0, 0.0, 72.0))
+	_build_frontier_landmarks()
 	_build_tree_population()
 	_build_npc(Vector3(2.0, 0.0, -1.0), Color("#d18b55"), Color("#4c6b8b"))
 	_build_npc(Vector3(-1.0, 0.0, 2.5), Color("#c7a56b"), Color("#6b4d76"))
@@ -121,6 +122,69 @@ func _add_path_stone(point: Vector3, side: Vector2) -> void:
 	var offset := rng.randf_range(1.5, 2.8) * (1.0 if rng.randf() > 0.5 else -1.0)
 	var stone := _box_mesh("TrailStone", Vector3(point.x + side.x * offset, 0.06, point.z + side.y * offset), Vector3(rng.randf_range(0.18, 0.42), 0.12, rng.randf_range(0.18, 0.38)), _mat(Color("#526052")))
 
+
+func _build_frontier_landmarks() -> void:
+	_build_crystal_quarry(Vector3(720.0, 0.0, -650.0))
+	_build_flooded_village(Vector3(-760.0, 0.0, 620.0))
+	_build_bone_arch(Vector3(850.0, 0.0, 720.0))
+	_build_frozen_shrine(Vector3(-820.0, 0.0, -760.0))
+	_build_npc_variant(Vector3(720.0, 0.0, -650.0), 2, Color("#d9a77a"), Color("#554d78"))
+	_build_npc_variant(Vector3(-760.0, 0.0, 620.0), 1, Color("#9c684c"), Color("#547b75"))
+	_build_npc_variant(Vector3(850.0, 0.0, 720.0), 5, Color("#e0bd91"), Color("#7a4d67"))
+	_build_npc_variant(Vector3(-820.0, 0.0, -760.0), 3, Color("#b88b68"), Color("#435c70"))
+
+func _build_crystal_quarry(pos: Vector3) -> void:
+	var rock := _mat(Color("#4c5664"))
+	var crystal := _mat(Color("#7bd2d0"), 0.8)
+	for i in range(18):
+		var a := TAU * i / 18.0
+		var p := pos + Vector3(cos(a) * rng.randf_range(8.0, 24.0), 0.0, sin(a) * rng.randf_range(8.0, 24.0))
+		_box_mesh("QuarryRock", p + Vector3(0.0, 1.0, 0.0), Vector3(rng.randf_range(3.0, 7.0), 2.0, rng.randf_range(3.0, 7.0)), rock)
+		_box_mesh("CrystalCluster", p + Vector3(0.0, 2.2, 0.0), Vector3(0.8, rng.randf_range(2.0, 5.0), 0.8), crystal)
+		_box_mesh("CrystalShard", p + Vector3(1.0, 1.8, 0.5), Vector3(0.45, 2.8, 0.45), crystal)
+
+func _build_flooded_village(pos: Vector3) -> void:
+	var wood := _mat(Color("#5d5145"))
+	var water := _mat(Color("#345e68"), 0.2)
+	for i in range(8):
+		var x := -24.0 + float(i % 4) * 16.0
+		var z := -18.0 + float(i / 4) * 36.0
+		var p := pos + Vector3(x, 0.0, z)
+		var pool := MeshInstance3D.new()
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = 7.0
+		mesh.bottom_radius = 7.0
+		mesh.height = 0.08
+		pool.mesh = mesh
+		pool.material_override = water
+		pool.position = p
+		add_child(pool)
+		_box_mesh("StiltHouse", p + Vector3(0.0, 2.0, 0.0), Vector3(7.0, 3.0, 6.0), wood)
+		for xpost in [-2.5, 2.5]:
+			for zpost in [-2.0, 2.0]:
+				_box_mesh("Stilt", p + Vector3(xpost, 0.9, zpost), Vector3(0.35, 1.8, 0.35), wood)
+	for i in range(50):
+		_box_mesh("VillageWalkway", pos + Vector3(-40.0 + i * 1.6, 1.2, 0.0), Vector3(1.5, 0.18, 2.0), _mat(Color("#80664a")))
+
+func _build_bone_arch(pos: Vector3) -> void:
+	var bone := _mat(Color("#c8bea2"))
+	for side in [-1.0, 1.0]:
+		_box_mesh("GiantRib", pos + Vector3(side * 7.0, 5.0, 0.0), Vector3(1.2, 10.0, 1.2), bone)
+		_box_mesh("ArchFoot", pos + Vector3(side * 7.0, 0.7, 0.0), Vector3(3.0, 1.4, 3.0), bone)
+	_box_mesh("BoneLintel", pos + Vector3(0.0, 10.0, 0.0), Vector3(16.0, 1.5, 2.0), bone)
+	for i in range(12):
+		var p := pos + Vector3(rng.randf_range(-16.0, 16.0), 0.3, rng.randf_range(-14.0, 14.0))
+		_box_mesh("Fossil", p, Vector3(1.4, 0.6, 2.0), bone)
+
+func _build_frozen_shrine(pos: Vector3) -> void:
+	var ice := _mat(Color("#9ac8d6"), 0.35)
+	var stone := _mat(Color("#596875"))
+	_box_mesh("ShrinePlatform", pos + Vector3(0.0, 0.4, 0.0), Vector3(18.0, 0.8, 18.0), stone)
+	for i in range(6):
+		var a := TAU * i / 6.0
+		_box_mesh("IceObelisk", pos + Vector3(cos(a) * 7.0, 3.5, sin(a) * 7.0), Vector3(1.4, 7.0, 1.4), ice)
+	_box_mesh("ShrineCore", pos + Vector3(0.0, 2.5, 0.0), Vector3(3.0, 5.0, 3.0), ice)
+
 func _build_tree_population() -> void:
 	var species := [
 		{"trunk": Color("#49372e"), "crown": Color("#254d3b"), "height": 3.6, "width": 2.1, "kind": 0},
@@ -154,7 +218,7 @@ func _build_tree_population() -> void:
 		crowns.append(crown_batch.multimesh)
 	var trunk_transforms := [[], [], [], []]
 	var crown_transforms := [[], [], [], []]
-	for n in range(15000):
+	for n in range(45000):
 		var x := rng.randf_range(-WORLD_HALF, WORLD_HALF)
 		var z := rng.randf_range(-WORLD_HALF, WORLD_HALF)
 		var point := Vector3(x, 0.0, z)
