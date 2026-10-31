@@ -4,6 +4,7 @@ const H:=64
 const GRAVITY:=18.0
 const JUMP_VELOCITY:=7.2
 var controls_enabled:=true
+var jump_requested:=false
 var sprite:Sprite3D
 var frame:=0
 var anim_time:=0.0
@@ -24,6 +25,9 @@ func _ready()->void:
  sprite.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_ON
  add_child(sprite)
  _draw_frame(0)
+func _input(event:InputEvent)->void:
+ if event is InputEventKey and event.keycode==KEY_SPACE and event.pressed and not event.echo:
+  jump_requested=true
 func _process(delta:float)->void:
  anim_time+=delta
  if moving:
@@ -46,11 +50,12 @@ func _physics_process(delta:float)->void:
  velocity.z=0.0
  if is_on_floor():
   velocity.y=0.0
-  if Input.is_key_just_pressed(KEY_SPACE):
+  if jump_requested:
    velocity.y=JUMP_VELOCITY
  else:
   velocity.y-=GRAVITY*delta
  move_and_slide()
+ jump_requested=false
 func _draw_frame(index:int)->void:
  var image:=Image.create(W,H,false,Image.FORMAT_RGBA8)
  image.fill(Color.TRANSPARENT)
