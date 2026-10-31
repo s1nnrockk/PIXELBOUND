@@ -6,12 +6,16 @@ extends Node3D
 const WORLD_HALF := 1280.0
 const PATH_WIDTH := 2.2
 const PATH_STEP := 1.25
+const PATH_GRID_SIZE := 8.0
 
 var camera_origin := Vector3(0.0, 4.8, 8.5)
 var intro_label: Label
 var main_menu: CanvasLayer
 var parallax_layers: Array[Node3D] = []
 var path_points: Array[Vector3] = []
+var path_grid: Dictionary = {}
+var material_cache: Dictionary = {}
+var health_update_timer := 0.0
 var rng := RandomNumberGenerator.new()
 var hearts := 3
 var deaths := 0
@@ -50,7 +54,10 @@ func start_game() -> void:
 
 func _process(delta: float) -> void:
 	damage_cooldown = maxf(0.0, damage_cooldown - delta)
-	_update_health_gameplay(delta)
+	health_update_timer -= delta
+	if health_update_timer <= 0.0:
+		health_update_timer = 0.2
+		_update_health_gameplay(0.2)
 	var target := character.global_position
 	var desired := Vector3(target.x, camera_origin.y, target.z + camera_origin.z)
 	camera.global_position = camera.global_position.lerp(desired, 1.0 - exp(-delta * 3.2))
@@ -278,6 +285,8 @@ func _build_long_trail() -> void:
 			point.x += side.x * sin(t * PI) * 1.4
 			point.z += side.y * sin(t * PI) * 1.4
 			path_points.append(point)
+		_register_path_point(point)
+			_register_path_point(point)
 			var tile := MeshInstance3D.new()
 			var tile_mesh := BoxMesh.new()
 			tile_mesh.size = Vector3(PATH_WIDTH + rng.randf_range(-0.12, 0.18), 0.045, PATH_STEP + 0.12)
@@ -440,10 +449,26 @@ func _new_multimesh(mesh: Mesh, material: Material, node_name: String) -> MultiM
 	add_child(instance)
 	return instance
 
+func _register_path_point(point: Vector3) -> void:
+	var cell := Vector2i(floori(point.x / PATH_GRID_SIZE), floori(point.z / PATH_GRID_SIZE))
+	if not path_grid.has(cell):
+		path_grid[cell] = []
+	path_grid[cell].append(point)
+
 func _near_path(point: Vector3, margin: float) -> bool:
-	for path_point in path_points:
-		if Vector2(point.x - path_point.x, point.z - path_point.z).length() < margin:
-			return true
+	var center := Vector2i(floori(point.x / PATH_GRID_SIZE), floori(point.z / PATH_GRID_SIZE))
+	var reach := ceili(margin / PATH_GRID_SIZE)
+	var margin_squared := margin * margin
+	for x in range(center.x - reach, center.x + reach + 1):
+		for z in range(center.y - reach, center.y + reach + 1):
+			var cell := Vector2i(x, z)
+			if not path_grid.has(cell):
+				continue
+			for path_point in path_grid[cell]:
+				var dx: float = point.x - path_point.x
+				var dz: float = point.z - path_point.z
+				if dx * dx + dz * dz < margin_squared:
+					return true
 	return false
 
 func _near_landmark(point: Vector3, margin: float) -> bool:
@@ -651,6 +676,9 @@ func _box_mesh(node_name: String, pos: Vector3, dimensions: Vector3, material: M
 	return instance
 
 func _mat(color: Color, emission: float = 0.0) -> StandardMaterial3D:
+	var key := color.to_html(true) + ":" + str(snappedf(emission, 0.01))
+	if material_cache.has(key):
+		return material_cache[key] as StandardMaterial3D
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
 	material.roughness = 1.0
@@ -659,4 +687,5 @@ func _mat(color: Color, emission: float = 0.0) -> StandardMaterial3D:
 		material.emission_enabled = true
 		material.emission = color
 		material.emission_energy_multiplier = emission
+	material_cache[key] = material
 	return material
