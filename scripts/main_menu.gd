@@ -143,6 +143,7 @@ func _make_menu_theme() -> AudioStreamWAV:
 	return wav
 
 func _make_ui_sound(frequency: float, duration: float, noise_amount: float) -> AudioStreamWAV:
+	# Synthesized pulse-wave bleeps for a crunchy 8-bit menu sound.
 	const RATE := 22050
 	var samples := int(RATE * duration)
 	var wav := AudioStreamWAV.new()
@@ -153,16 +154,20 @@ func _make_ui_sound(frequency: float, duration: float, noise_amount: float) -> A
 	data.resize(samples * 2)
 	for i in range(samples):
 		var t := float(i) / RATE
-		var envelope := exp(-t * 18.0)
-		var noise := rng.randf_range(-1.0, 1.0) * noise_amount
-		var tone := sin(TAU * frequency * t) * 0.35
-		var sample := (tone + noise) * envelope
+		var progress := t / maxf(duration, 0.001)
+		var pitch := frequency * (1.0 - 0.22 * progress)
+		var phase := fposmod(t * pitch, 1.0)
+		var pulse := 0.42 if phase < 0.5 else -0.42
+		var overtone_phase := fposmod(t * pitch * 2.0, 1.0)
+		var overtone := 0.10 if overtone_phase < 0.5 else -0.10
+		var envelope := pow(1.0 - progress, 1.7)
+		var sample := (pulse + overtone) * envelope
 		data.encode_s16(i * 2, int(clampf(sample, -0.9, 0.9) * 32767.0))
 	wav.data = data
 	return wav
 
 func _play_ui_sound(is_hover: bool = false) -> void:
-	ui_player.stream = _make_ui_sound(780.0 if is_hover else 420.0, 0.075 if is_hover else 0.13, 0.04 if is_hover else 0.12)
+	ui_player.stream = _make_ui_sound(1040.0 if is_hover else 520.0, 0.055 if is_hover else 0.12, 0.0)
 	ui_player.play()
 
 func _build_menu() -> void:
@@ -192,10 +197,10 @@ func _build_menu() -> void:
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.055, 0.075, 0.085, 0.94)
 	panel_style.border_color = Color(0.72, 0.64, 0.45, 0.48)
-	panel_style.set_border_width_all(1)
-	panel_style.set_corner_radius_all(22)
-	panel_style.shadow_color = Color(0.0, 0.0, 0.0, 0.4)
-	panel_style.shadow_size = 24
+	panel_style.set_border_width_all(4)
+	panel_style.set_corner_radius_all(0)
+	panel_style.shadow_color = Color(0.0, 0.0, 0.0, 0.0)
+	panel_style.shadow_size = 0
 	panel.add_theme_stylebox_override("panel", panel_style)
 	menu_root.add_child(panel)
 
@@ -216,7 +221,7 @@ func _build_menu() -> void:
 	title_label = Label.new()
 	title_label.text = "PIXELBOUND"
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_label.add_theme_font_size_override("font_size", 46)
+	title_label.add_theme_font_size_override("font_size", 42)
 	title_label.add_theme_color_override("font_color", Color("#f0dfbd"))
 	title_label.add_theme_color_override("font_shadow_color", Color("#9a7544"))
 	title_label.add_theme_constant_override("shadow_offset_x", 0)
@@ -262,24 +267,27 @@ func _add_button(parent: VBoxContainer, text_value: String, callback: Callable, 
 	button.text = text_value
 	button.custom_minimum_size = Vector2(0, 52)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.add_theme_font_size_override("font_size", 15)
+	button.add_theme_font_size_override("font_size", 17)
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(0.29, 0.34, 0.29, 0.94) if primary else Color(0.10, 0.14, 0.14, 0.9)
 	normal.border_color = Color("#b7a16c") if primary else Color(0.45, 0.52, 0.47, 0.5)
-	normal.set_border_width_all(1)
-	normal.set_corner_radius_all(12)
+	normal.set_border_width_all(3)
+	normal.set_corner_radius_all(0)
 	var hover := normal.duplicate() as StyleBoxFlat
 	hover.bg_color = Color(0.39, 0.45, 0.36, 1.0) if primary else Color(0.17, 0.23, 0.21, 1.0)
 	hover.border_color = Color("#e5d2a0")
-	hover.shadow_color = Color(0.65, 0.55, 0.35, 0.16)
-	hover.shadow_size = 8
+	hover.shadow_color = Color(0.0, 0.0, 0.0, 0.0)
+	hover.shadow_size = 0
 	var pressed := hover.duplicate() as StyleBoxFlat
 	pressed.bg_color = Color(0.22, 0.28, 0.24, 1.0)
 	button.add_theme_stylebox_override("normal", normal)
 	button.add_theme_stylebox_override("hover", hover)
 	button.add_theme_stylebox_override("pressed", pressed)
-	button.add_theme_color_override("font_color", Color("#f1eadb"))
-	button.add_theme_color_override("font_hover_color", Color("#fff4d9"))
+	button.add_theme_color_override("font_color", Color("#d8e8bd"))
+	button.add_theme_color_override("font_hover_color", Color("#fff2a6"))
+	button.add_theme_color_override("font_pressed_color", Color("#ffffff"))
+	button.add_theme_constant_override("outline_size", 1)
+	button.add_theme_color_override("font_outline_color", Color("#17251e"))
 	button.pressed.connect(callback)
 	button.mouse_entered.connect(_on_button_hover)
 	parent.add_child(button)
@@ -312,8 +320,8 @@ func _on_settings_pressed() -> void:
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.07, 0.09, 0.09, 0.98)
 	style.border_color = Color("#b7a16c")
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(18)
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(0)
 	settings_root.add_theme_stylebox_override("panel", style)
 	menu_root.add_child(settings_root)
 	var layout := VBoxContainer.new()
