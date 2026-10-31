@@ -41,15 +41,24 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path build -Force | Out-Null
-          $log = & "$env:GODOT_EXE" --headless --path . --export-release "Windows Desktop" build/PIXELBOUND.exe 2>&1
+          $log = & "$env:GODOT_EXE" --headless --path . --export-release "Windows Desktop" "build/PIXELBOUND.exe" 2>&1
+          $exitCode = $LASTEXITCODE
           $log | ForEach-Object { Write-Host $_ }
           if ($log -match "ERROR:|Export failed|Failed to") {
             throw "Godot reported export errors."
           }
-          if (($LASTEXITCODE -is [int]) -and ($LASTEXITCODE -ne 0)) {
-            throw "Windows export failed with exit code $LASTEXITCODE"
+          if (($exitCode -is [int]) -and ($exitCode -ne 0)) {
+            throw "Windows export failed with exit code $exitCode"
           }
-          if (-not (Test-Path "build/PIXELBOUND.exe")) { throw "PIXELBOUND.exe was not generated." }
+          if (-not (Test-Path "build/PIXELBOUND.exe")) {
+            $candidates = Get-ChildItem -Path . -Filter "*.exe" -Recurse -File | Select-Object -ExpandProperty FullName
+            Write-Host "Executable files found: $($candidates -join ', ')"
+            if (Test-Path "PIXELBOUND.exe") {
+              Move-Item "PIXELBOUND.exe" "build/PIXELBOUND.exe" -Force
+            } else {
+              throw "PIXELBOUND.exe was not generated. Godot exit code: $exitCode"
+            }
+          }
           if ((Get-Item "build/PIXELBOUND.exe").Length -lt 1000000) { throw "PIXELBOUND.exe is unexpectedly small." }
       - uses: actions/upload-artifact@v4
         with:
