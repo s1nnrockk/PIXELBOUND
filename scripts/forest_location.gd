@@ -89,8 +89,9 @@ func _play_house_exit() -> void:
 	var walk := create_tween()
 	walk.set_trans(Tween.TRANS_SINE)
 	walk.set_ease(Tween.EASE_IN_OUT)
-	walk.tween_property(character, "global_position", Vector3(-4.45, 0.0, -1.65), 2.6)
+	walk.tween_property(character, "global_position", Vector3(-4.45, 0.0, 1.6), 2.6)
 	await walk.finished
+	character.global_position = Vector3(-4.45, 0.0, 1.6)
 	var zoom := create_tween()
 	zoom.set_trans(Tween.TRANS_SINE)
 	zoom.set_ease(Tween.EASE_OUT)
@@ -408,7 +409,7 @@ func _build_tree_population() -> void:
 		crowns.append(crown_batch.multimesh)
 	var trunk_transforms := [[], [], [], []]
 	var crown_transforms := [[], [], [], []]
-	for n in range(45000):
+	for n in range(12000):
 		var x := rng.randf_range(-WORLD_HALF, WORLD_HALF)
 		var z := rng.randf_range(-WORLD_HALF, WORLD_HALF)
 		var point := Vector3(x, 0.0, z)
