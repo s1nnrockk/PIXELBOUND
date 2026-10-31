@@ -124,6 +124,10 @@ func _add_path_stone(point: Vector3, side: Vector2) -> void:
 
 
 func _build_frontier_landmarks() -> void:
+	_build_remote_trail(Vector3(62.0, 0.0, 48.0), Vector3(720.0, 0.0, -650.0))
+	_build_remote_trail(Vector3(-48.0, 0.0, 52.0), Vector3(-760.0, 0.0, 620.0))
+	_build_remote_trail(Vector3(62.0, 0.0, 48.0), Vector3(850.0, 0.0, 720.0))
+	_build_remote_trail(Vector3(-54.0, 0.0, -62.0), Vector3(-820.0, 0.0, -760.0))
 	_build_crystal_quarry(Vector3(720.0, 0.0, -650.0))
 	_build_flooded_village(Vector3(-760.0, 0.0, 620.0))
 	_build_bone_arch(Vector3(850.0, 0.0, 720.0))
@@ -132,6 +136,21 @@ func _build_frontier_landmarks() -> void:
 	_build_npc_variant(Vector3(-760.0, 0.0, 620.0), 1, Color("#9c684c"), Color("#547b75"))
 	_build_npc_variant(Vector3(850.0, 0.0, 720.0), 5, Color("#e0bd91"), Color("#7a4d67"))
 	_build_npc_variant(Vector3(-820.0, 0.0, -760.0), 3, Color("#b88b68"), Color("#435c70"))
+
+func _build_remote_trail(start: Vector3, finish: Vector3) -> void:
+	var direction := Vector2(finish.x - start.x, finish.z - start.z).normalized()
+	var steps := int(ceil(start.distance_to(finish) / 4.0))
+	for i in range(steps):
+		var point := start.lerp(finish, float(i) / float(steps))
+		var tile := MeshInstance3D.new()
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(2.5, 0.05, 4.0)
+		tile.mesh = mesh
+		tile.material_override = path_material if i % 7 != 0 else path_edge_material
+		tile.position = Vector3(point.x, -0.04, point.z)
+		tile.rotation.y = atan2(direction.x, direction.y)
+		add_child(tile)
+		path_points.append(point)
 
 func _build_crystal_quarry(pos: Vector3) -> void:
 	var rock := _mat(Color("#4c5664"))
