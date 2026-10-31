@@ -12,6 +12,14 @@ jobs:
       image: barichello/godot-ci:4.3
     steps:
       - uses: actions/checkout@v4
+      - name: Install Godot export templates
+        run: |
+          GODOT_VERSION=4.3
+          TEMPLATE_VERSION=4.3.stable
+          wget -q "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz" -O /tmp/godot-templates.tpz
+          mkdir -p /tmp/godot-templates "$HOME/.local/share/godot/export_templates/$TEMPLATE_VERSION"
+          unzip -q /tmp/godot-templates.tpz -d /tmp/godot-templates
+          cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/$TEMPLATE_VERSION/"
       - name: Import project
         run: godot --headless --editor --path . --quit
       - name: Export Windows
