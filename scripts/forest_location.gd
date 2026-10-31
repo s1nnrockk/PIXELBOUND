@@ -9,6 +9,7 @@ const PATH_STEP := 1.25
 
 var camera_origin := Vector3(0.0, 4.8, 8.5)
 var intro_label: Label
+var main_menu: CanvasLayer
 var parallax_layers: Array[Node3D] = []
 var path_points: Array[Vector3] = []
 var rng := RandomNumberGenerator.new()
@@ -35,6 +36,15 @@ func _ready() -> void:
 	camera.current = true
 	camera.global_position = character.global_position + camera_origin
 	camera.look_at(character.global_position + Vector3(0.0, 0.9, 0.0), Vector3.UP)
+	main_menu = CanvasLayer.new()
+	main_menu.name = "MainMenuLayer"
+	main_menu.set_script(load("res://scripts/main_menu.gd"))
+	add_child(main_menu)
+	main_menu.call("setup", self)
+
+
+func start_game() -> void:
+	character.set("controls_enabled", false)
 	_build_intro_caption()
 	_play_house_exit()
 
