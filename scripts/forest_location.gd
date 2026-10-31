@@ -247,6 +247,7 @@ func _add_ground() -> void:
 	mesh.size = Vector2(WORLD_HALF * 2.0 + 40.0, WORLD_HALF * 2.0 + 40.0)
 	ground.mesh = mesh
 	ground.material_override = grass_material
+	ground.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ground.position.y = -0.12
 	add_child(ground)
 
@@ -272,6 +273,8 @@ func _build_long_trail() -> void:
 		Vector3(54.0, 0.0, -18.0),
 		Vector3(42.0, 0.0, -30.0)
 	]
+	var trail_transforms: Array[Transform3D] = []
+	var trail_edge_transforms: Array[Transform3D] = []
 	for segment in range(waypoints.size() - 1):
 		var a: Vector3 = waypoints[segment]
 		var b: Vector3 = waypoints[segment + 1]
@@ -286,16 +289,19 @@ func _build_long_trail() -> void:
 			point.z += side.y * sin(t * PI) * 1.4
 			path_points.append(point)
 			_register_path_point(point)
-			var tile := MeshInstance3D.new()
-			var tile_mesh := BoxMesh.new()
-			tile_mesh.size = Vector3(PATH_WIDTH + rng.randf_range(-0.12, 0.18), 0.045, PATH_STEP + 0.12)
-			tile.mesh = tile_mesh
-			tile.material_override = path_material if rng.randf() > 0.16 else path_edge_material
-			tile.position = Vector3(point.x, -0.035, point.z)
-			tile.rotation.y = atan2(direction.x, direction.y)
-			add_child(tile)
+			var tile_width := PATH_WIDTH + rng.randf_range(-0.12, 0.18)
+			var tile_basis := Basis(Vector3.UP, atan2(direction.x, direction.y)).scaled(Vector3(tile_width / PATH_WIDTH, 1.0, 1.0))
+			var tile_transform := Transform3D(tile_basis, Vector3(point.x, -0.035, point.z))
+			if rng.randf() > 0.16:
+				trail_transforms.append(tile_transform)
+			else:
+				trail_edge_transforms.append(tile_transform)
 			if step % 5 == 0:
 				_add_path_stone(point, side)
+	var trail_mesh := BoxMesh.new()
+	trail_mesh.size = Vector3(PATH_WIDTH, 0.045, PATH_STEP + 0.12)
+	_add_multimesh_batch("MainTrail", trail_mesh, path_material, trail_transforms)
+	_add_multimesh_batch("MainTrailEdges", trail_mesh, path_edge_material, trail_edge_transforms)
 
 func _add_path_stone(point: Vector3, side: Vector2) -> void:
 	var offset := rng.randf_range(1.5, 2.8) * (1.0 if rng.randf() > 0.5 else -1.0)
@@ -319,18 +325,22 @@ func _build_frontier_landmarks() -> void:
 func _build_remote_trail(start: Vector3, finish: Vector3) -> void:
 	var direction := Vector2(finish.x - start.x, finish.z - start.z).normalized()
 	var steps := int(ceil(start.distance_to(finish) / 4.0))
+	var trail_transforms: Array[Transform3D] = []
+	var edge_transforms: Array[Transform3D] = []
+	var basis := Basis(Vector3.UP, atan2(direction.x, direction.y))
 	for i in range(steps):
 		var point := start.lerp(finish, float(i) / float(steps))
-		var tile := MeshInstance3D.new()
-		var mesh := BoxMesh.new()
-		mesh.size = Vector3(2.5, 0.05, 4.0)
-		tile.mesh = mesh
-		tile.material_override = path_material if i % 7 != 0 else path_edge_material
-		tile.position = Vector3(point.x, -0.04, point.z)
-		tile.rotation.y = atan2(direction.x, direction.y)
-		add_child(tile)
+		var transform := Transform3D(basis, Vector3(point.x, -0.04, point.z))
+		if i % 7 != 0:
+			trail_transforms.append(transform)
+		else:
+			edge_transforms.append(transform)
 		path_points.append(point)
 		_register_path_point(point)
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(2.5, 0.05, 4.0)
+	_add_multimesh_batch("RemoteTrail", mesh, path_material, trail_transforms)
+	_add_multimesh_batch("RemoteTrailEdges", mesh, path_edge_material, edge_transforms)
 
 func _build_crystal_quarry(pos: Vector3) -> void:
 	var rock := _mat(Color("#4c5664"))
@@ -437,6 +447,22 @@ func _build_tree_population() -> void:
 			trunks[species_index].set_instance_transform(instance_index, trunk_transforms[species_index][instance_index])
 			crowns[species_index].set_instance_transform(instance_index, crown_transforms[species_index][instance_index])
 
+func _add_multimesh_batch(node_name: String, mesh: Mesh, material: Material, transforms: Array[Transform3D]) -> void:
+	if transforms.is_empty():
+		return
+	var multi := MultiMesh.new()
+	multi.transform_format = MultiMesh.TRANSFORM_3D
+	multi.mesh = mesh
+	multi.instance_count = transforms.size()
+	for i in range(transforms.size()):
+		multi.set_instance_transform(i, transforms[i])
+	var instance := MultiMeshInstance3D.new()
+	instance.name = node_name
+	instance.multimesh = multi
+	instance.material_override = material
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(instance)
+
 func _new_multimesh(mesh: Mesh, material: Material, node_name: String) -> MultiMeshInstance3D:
 	var multi := MultiMesh.new()
 	multi.transform_format = MultiMesh.TRANSFORM_3D
@@ -446,6 +472,7 @@ func _new_multimesh(mesh: Mesh, material: Material, node_name: String) -> MultiM
 	instance.name = node_name
 	instance.multimesh = multi
 	instance.material_override = material
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(instance)
 	return instance
 
@@ -661,6 +688,7 @@ func _box_mesh_parent(parent: Node3D, node_name: String, pos: Vector3, dimension
 	mesh.size = dimensions
 	instance.mesh = mesh
 	instance.material_override = material
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	instance.position = pos
 	parent.add_child(instance)
 
@@ -671,6 +699,7 @@ func _box_mesh(node_name: String, pos: Vector3, dimensions: Vector3, material: M
 	mesh.size = dimensions
 	instance.mesh = mesh
 	instance.material_override = material
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	instance.position = pos
 	add_child(instance)
 	return instance
