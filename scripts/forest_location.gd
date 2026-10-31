@@ -313,6 +313,47 @@ func _pixel_rect(image: Image, x: int, y: int, w: int, h: int, color: Color) -> 
 		for py in range(y, y + h):
 			image.set_pixel(px, py, color)
 
+
+func _build_npc_variant(pos: Vector3, archetype: int, skin: Color, clothes: Color) -> void:
+	var image := Image.create(24, 32, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	# Shared pixel body, with silhouette/accessory changes per traveler archetype.
+	_pixel_rect(image, 7, 5, 10, 8, skin)
+	_pixel_rect(image, 6, 4, 12, 3, Color("#342b2b") if archetype % 2 == 0 else Color("#5b4031"))
+	_pixel_rect(image, 5, 13, 14, 10, clothes)
+	_pixel_rect(image, 4, 14, 3, 8, clothes.darkened(0.2))
+	_pixel_rect(image, 17, 14, 3, 8, clothes.darkened(0.2))
+	_pixel_rect(image, 7, 23, 4, 7, Color("#292a36"))
+	_pixel_rect(image, 13, 23, 4, 7, Color("#292a36"))
+	match archetype:
+		0: # windmill keeper: broad hat
+			_pixel_rect(image, 3, 3, 18, 2, Color("#c7b28a"))
+			_pixel_rect(image, 6, 1, 12, 3, Color("#c7b28a"))
+		1: # marsh guide: hood and reed bundle
+			_pixel_rect(image, 4, 3, 16, 5, Color("#5b5945"))
+			_pixel_rect(image, 19, 12, 3, 13, Color("#9b9a62"))
+		2: # canyon courier: scarf
+			_pixel_rect(image, 6, 12, 12, 3, Color("#d17b58"))
+			_pixel_rect(image, 16, 14, 5, 5, Color("#d17b58"))
+		3: # astronomer: tall cap and star badge
+			_pixel_rect(image, 8, 0, 8, 5, Color("#39475c"))
+			_pixel_rect(image, 11, 16, 3, 3, Color("#9bb8d4"))
+		4: # orchard worker: apron and basket
+			_pixel_rect(image, 8, 15, 8, 8, Color("#c9b38a"))
+			_pixel_rect(image, 18, 18, 5, 5, Color("#9a6841"))
+		5: # railway mechanic: tool satchel
+			_pixel_rect(image, 3, 16, 5, 7, Color("#8c6848"))
+			_pixel_rect(image, 15, 18, 5, 3, Color("#b8b8b0"))
+	var sprite := Sprite3D.new()
+	sprite.name = "Traveler_%d" % archetype
+	sprite.texture = ImageTexture.create_from_image(image)
+	sprite.pixel_size = 0.035
+	sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+	sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	sprite.position = pos + Vector3(0.0, 0.64, 0.0)
+	add_child(sprite)
+
 func _build_lantern(pos: Vector3) -> void:
 	_box_mesh("LanternPost", pos + Vector3(0.0, 0.55, 0.0), Vector3(0.08, 1.1, 0.08), _mat(Color("#4a3931")))
 	_box_mesh("LanternGlow", pos + Vector3(0.0, 1.12, 0.0), Vector3(0.28, 0.3, 0.28), _mat(Color("#ffc56b"), 0.2))
