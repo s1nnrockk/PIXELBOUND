@@ -11,6 +11,14 @@ var camera_origin := Vector3(0.0, 8.5, 9.5)
 var parallax_layers: Array[Node3D] = []
 var path_points: Array[Vector3] = []
 var rng := RandomNumberGenerator.new()
+var hearts := 3
+var deaths := 0
+var damage_cooldown := 0.0
+var pickup_positions: Array[Vector3] = []
+var pickup_nodes: Array[Node3D] = []
+var hearts_label: Label
+var deaths_label: Label
+var hud_layer: CanvasLayer
 
 var grass_material: StandardMaterial3D
 var path_material: StandardMaterial3D
@@ -26,6 +34,8 @@ func _ready() -> void:
 	camera.current = true
 
 func _process(delta: float) -> void:
+	damage_cooldown = maxf(0.0, damage_cooldown - delta)
+	_update_health_gameplay(delta)
 	var target := character.global_position
 	var desired := Vector3(target.x * 0.72, camera_origin.y, target.z * 0.72 + camera_origin.z)
 	camera.position = camera.position.lerp(desired, 1.0 - exp(-delta * 2.4))
@@ -42,6 +52,9 @@ func _build_forest() -> void:
 	_add_ground()
 	_build_long_trail()
 	_build_house(Vector3(-5.0, 0.0, -5.0))
+	_build_house(Vector3(280.0, 0.0, -210.0))
+	_build_house(Vector3(-310.0, 0.0, 210.0))
+	_build_house(Vector3(320.0, 0.0, 320.0))
 	_build_lake_and_bridge(Vector3(42.0, 0.0, -30.0))
 	_build_ruins(Vector3(-54.0, 0.0, -62.0))
 	_build_watchtower(Vector3(62.0, 0.0, 48.0))
@@ -62,6 +75,109 @@ func _build_forest() -> void:
 	_build_lantern(Vector3(0.8, 0.0, -2.4))
 	_build_lantern(Vector3(-0.8, 0.0, 3.4))
 	_build_parallax_horizon()
+	_build_heart_pickups()
+	_build_health_hud()
+
+
+func _build_health_hud() -> void:
+	hud_layer = CanvasLayer.new()
+	hud_layer.name = "HealthHUD"
+	add_child(hud_layer)
+	hearts_label = Label.new()
+	hearts_label.position = Vector2(12.0, 8.0)
+	hearts_label.add_theme_font_size_override("font_size", 22)
+	hearts_label.add_theme_color_override("font_color", Color("#ffcfb5"))
+	hearts_label.add_theme_color_override("font_shadow_color", Color("#261b2a"))
+	hearts_label.add_theme_constant_override("shadow_offset_x", 2)
+	hearts_label.add_theme_constant_override("shadow_offset_y", 2)
+	hud_layer.add_child(hearts_label)
+	deaths_label = Label.new()
+	deaths_label.position = Vector2(12.0, 34.0)
+	deaths_label.add_theme_font_size_override("font_size", 11)
+	deaths_label.add_theme_color_override("font_color", Color("#e4d8c7"))
+	hud_layer.add_child(deaths_label)
+	_update_health_hud()
+
+func _update_health_hud() -> void:
+	if hearts_label == null:
+		return
+	var heart_text := ""
+	for i in range(3):
+		heart_text += "♥ " if i < hearts else "♡ "
+	hearts_label.text = heart_text
+	deaths_label.text = "Падения: %d / 3" % deaths
+
+func _update_health_gameplay(delta: float) -> void:
+	if not is_instance_valid(character):
+		return
+	var p := character.global_position
+	var in_ruins := Vector2(p.x + 54.0, p.z + 62.0).length() < 7.0
+	var in_bone_arch := Vector2(p.x - 850.0, p.z - 720.0).length() < 9.0
+	var off_trail := not _near_path(p, 3.0) and not _near_landmark(p, 8.0)
+	if damage_cooldown <= 0.0 and (in_ruins or in_bone_arch or (off_trail and rng.randf() < delta * 0.035)):
+		_take_damage()
+
+	for i in range(pickup_positions.size()):
+		if pickup_nodes[i] == null:
+			continue
+		if character.global_position.distance_to(pickup_positions[i]) < 1.8:
+			if hearts < 3:
+				hearts += 1
+			pickup_nodes[i].queue_free()
+			pickup_nodes[i] = null
+			_update_health_hud()
+
+func _take_damage() -> void:
+	if hearts <= 0:
+		return
+	hearts -= 1
+	damage_cooldown = 2.5
+	_update_health_hud()
+	if hearts <= 0:
+		deaths += 1
+		character.global_position = Vector3(0.0, 0.0, 0.0)
+		hearts = 3
+		damage_cooldown = 3.0
+		if deaths >= 3:
+			deaths = 0
+			# Three deaths restart the journey at the first location.
+			character.global_position = Vector3(0.0, 0.0, 0.0)
+		_update_health_hud()
+
+func _build_heart_pickups() -> void:
+	var cabins := [
+		Vector3(280.0, 0.0, -210.0),
+		Vector3(-310.0, 0.0, 210.0),
+		Vector3(320.0, 0.0, 320.0)
+	]
+	cabins.shuffle()
+	for i in range(2):
+		var p: Vector3 = cabins[i] + Vector3(rng.randf_range(-1.0, 1.0), 0.0, 1.8)
+		pickup_positions.append(p + Vector3(0.0, 0.8, 0.0))
+		pickup_nodes.append(_make_heart_pickup(p))
+
+func _make_heart_pickup(pos: Vector3) -> Node3D:
+	var pickup := Node3D.new()
+	pickup.name = "HiddenHeart"
+	pickup.position = pos
+	var image := Image.create(9, 8, false, Image.FORMAT_RGBA8)
+	image.fill(Color.TRANSPARENT)
+	for x in [1, 2, 3, 5, 6, 7]:
+		for y in [1, 2]:
+			image.set_pixel(x, y, Color("#ff7892"))
+	for x in range(1, 8):
+		for y in range(2, 7):
+			if (x >= 2 and x <= 6) or y >= 4:
+				image.set_pixel(x, y, Color("#ff7892"))
+	var sprite := Sprite3D.new()
+	sprite.texture = ImageTexture.create_from_image(image)
+	sprite.pixel_size = 0.12
+	sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sprite.shaded = false
+	sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	pickup.add_child(sprite)
+	add_child(pickup)
+	return pickup
 
 func _add_ground() -> void:
 	var ground := MeshInstance3D.new()
