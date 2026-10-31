@@ -52,3 +52,29 @@ func _process(delta: float) -> void:
 	var sneaking := bool(character.get("sneak"))
 	shadow.scale = Vector3(0.82, 0.82, 1.0) if sneaking else Vector3.ONE
 	shadow_material.albedo_color.a = 0.62 if sneaking else 0.78
+	_update_character_color_bounce()
+
+func _update_character_color_bounce() -> void:
+	var sprite := character.get_node_or_null("PixelSprite") as Sprite3D
+	if sprite == null:
+		return
+
+	var world_position := character.global_position + Vector3(0.0, 0.8, 0.0)
+	var warm_strength := _light_influence(world_position, warm)
+	var cyan_strength := _light_influence(world_position, cyan)
+	var purple_strength := _light_influence(world_position, purple)
+	var total := warm_strength + cyan_strength + purple_strength
+	if total <= 0.001:
+		sprite.modulate = Color.WHITE
+		return
+
+	var warm_color := Color(1.0, 0.42, 0.2)
+	var cyan_color := Color(0.28, 0.68, 1.0)
+	var purple_color := Color(0.72, 0.38, 1.0)
+	var tint := (warm_color * warm_strength + cyan_color * cyan_strength + purple_color * purple_strength) / total
+	var amount := minf(total * 0.22, 0.28)
+	sprite.modulate = Color.WHITE.lerp(tint, amount)
+
+func _light_influence(target: Vector3, light: OmniLight3D) -> float:
+	var distance := target.distance_to(light.global_position)
+	return clampf(1.0 - distance / light.omni_range, 0.0, 1.0)
