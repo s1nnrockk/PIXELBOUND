@@ -19,6 +19,7 @@ func _ready()->void:
  sprite.pixel_size=0.035
  sprite.billboard=BaseMaterial3D.BILLBOARD_ENABLED
  sprite.shaded=false
+ sprite.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR
  sprite.alpha_cut=SpriteBase3D.ALPHA_CUT_DISCARD
  sprite.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_ON
  add_child(sprite)
