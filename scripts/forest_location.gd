@@ -312,8 +312,8 @@ func _build_lantern(pos: Vector3) -> void:
 	_box_mesh("LanternGlow", pos + Vector3(0.0, 1.12, 0.0), Vector3(0.28, 0.3, 0.28), _mat(Color("#ffc56b"), 0.2))
 
 func _build_parallax_horizon() -> void:
-	_build_background_layer(-1, Color("#172d2b"), -150.0, 80.0)
-	_build_background_layer(-2, Color("#203b35"), -115.0, 100.0)
+	_build_background_layer(-1, Color("#172d2b"), -150.0, 160.0)
+	_build_background_layer(-2, Color("#203b35"), -115.0, 190.0)
 
 func _build_background_layer(index: int, color: Color, z: float, span: float) -> void:
 	var layer := Node3D.new()
@@ -326,7 +326,7 @@ func _build_background_layer(index: int, color: Color, z: float, span: float) ->
 		var x := -span + float(i) * (span * 2.0 / 60.0)
 		var h := 8.0 + float((i * 7 + abs(index)) % 7) * 1.4
 		_box_mesh_parent(layer, "FarTreeTrunk", Vector3(x, h * 0.5, 0.0), Vector3(1.0, h, 1.0), material)
-		_box_mesh_parent(layer, "FarTreeCrown", Vector3(x, h + 1.0, 0.0), Vector3(5.0, 4.0, 1.0), material)
+		_box_mesh_parent(layer, "FarTreeCrown", Vector3(x, h + 1.0, 0.0), Vector3(9.0, 4.0, 1.0), material)
 
 func _box_mesh_parent(parent: Node3D, node_name: String, pos: Vector3, dimensions: Vector3, material: Material) -> void:
 	var instance := MeshInstance3D.new()
