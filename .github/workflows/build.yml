@@ -16,9 +16,9 @@ jobs:
           $version = "4.3"
           $godotZip = "$env:RUNNER_TEMP\godot.zip"
           $templatesZip = "$env:RUNNER_TEMP\templates.zip"
-          Invoke-WebRequest "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_win64.exe.zip" -OutFile $godotZip
+          Invoke-WebRequest "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_win64_console.exe.zip" -OutFile $godotZip
           Expand-Archive $godotZip "$env:RUNNER_TEMP\godot" -Force
-          $godot = (Get-ChildItem "$env:RUNNER_TEMP\godot" -Filter "Godot_v4.3-stable_win64.exe" -Recurse | Select-Object -First 1).FullName
+          $godot = (Get-ChildItem "$env:RUNNER_TEMP\godot" -Filter "Godot_v4.3-stable_win64_console.exe" -Recurse | Select-Object -First 1).FullName
           if (-not $godot) { throw "Godot executable was not found after extraction." }
           Invoke-WebRequest "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz" -OutFile $templatesZip
           Expand-Archive $templatesZip "$env:RUNNER_TEMP\templates" -Force
