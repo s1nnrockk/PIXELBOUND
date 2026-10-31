@@ -6,36 +6,44 @@ const JUMP_VELOCITY:=7.2
 var controls_enabled:=true
 var jump_requested:=false
 var sprite:Sprite3D
+var walk_textures: Array[Texture2D] = []
+var idle_textures: Array[Texture2D] = []
+var last_texture: Texture2D
 var frame:=0
 var anim_time:=0.0
 var move_time:=0.0
 var moving:=false
 var sneak:=false
 func _ready()->void:
- var image:=Image.create(W,H,false,Image.FORMAT_RGBA8)
- image.fill(Color.TRANSPARENT)
  sprite=Sprite3D.new()
  sprite.name="PixelSprite"
- sprite.texture=ImageTexture.create_from_image(image)
  sprite.pixel_size=0.035
  sprite.billboard=BaseMaterial3D.BILLBOARD_ENABLED
  sprite.shaded=false
- sprite.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR
+ sprite.texture_filter=BaseMaterial3D.TEXTURE_FILTER_NEAREST
  sprite.alpha_cut=SpriteBase3D.ALPHA_CUT_DISCARD
  sprite.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_ON
  add_child(sprite)
- _draw_frame(0)
+ for i in range(4):
+  walk_textures.append(_create_frame(i, true))
+ for i in range(2):
+  idle_textures.append(_create_frame(i, false))
+ sprite.texture = idle_textures[0]
+ sprite.position.y = 1.08
 func _input(event:InputEvent)->void:
  if controls_enabled and event is InputEventKey and event.keycode==KEY_SPACE and event.pressed and not event.echo:
   jump_requested=true
 func _process(delta:float)->void:
  anim_time+=delta
- if moving:
+ if is_walking:
   move_time+=delta*(2.8 if sneak else 5.2)
   frame=int(move_time)%4
  else:
   frame=int(anim_time*2.0)%2
- _draw_frame(frame)
+ var next_texture: Texture2D = walk_textures[frame] if moving else idle_textures[frame]
+ if next_texture != last_texture:
+  sprite.texture = next_texture
+  last_texture = next_texture
 func _physics_process(delta:float)->void:
  if not controls_enabled:
   velocity=Vector3.ZERO
@@ -60,7 +68,7 @@ func _physics_process(delta:float)->void:
   velocity.y-=GRAVITY*delta
  move_and_slide()
  jump_requested=false
-func _draw_frame(index:int)->void:
+func _create_frame(index:int, is_walking:bool)->Texture2D:
  var image:=Image.create(W,H,false,Image.FORMAT_RGBA8)
  image.fill(Color.TRANSPARENT)
  var dark:=Color("#151827")
@@ -97,13 +105,12 @@ func _draw_frame(index:int)->void:
  _rect(image,7,12+bob,1,10,edge)
  _rect(image,16,13+bob,1,8,mid)
  _rect(image,10,18+bob,1,5,edge)
- var arm: int=[-1,0,1,0][index] if moving else 0
+ var arm: int=[-1,0,1,0][index] if is_walking else 0
  _rect(image,3,13+bob+arm,3,9,dark)
  _rect(image,18,13+bob-arm,3,9,dark)
  _rect(image,3,20+bob+arm,3,2,skin)
  _rect(image,18,20+bob-arm,3,2,skin)
- sprite.texture=ImageTexture.create_from_image(image)
- sprite.position.y=1.08
+ return ImageTexture.create_from_image(image)
 func _rect(image:Image,x:int,y:int,w:int,h:int,color:Color)->void:
  var scale_factor:=2
  for px in range(max(0,x*scale_factor),min(W,(x+w)*scale_factor)):
