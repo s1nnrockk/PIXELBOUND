@@ -79,7 +79,7 @@ func _create_frame(index:int, is_walking:bool)->Texture2D:
  var mask:=Color("#a6b0bd")
  var leg_shift:=0
  var bob:=0
- if moving:
+ if is_walking:
   leg_shift=[-2,-1,1,2][index]
   bob=[0,-1,0,1][index]
  elif index==1:
