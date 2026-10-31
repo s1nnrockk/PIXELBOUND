@@ -10,6 +10,7 @@ var title_label: Label
 var music_slider: HSlider
 var ambience_slider: HSlider
 var started := false
+var footstep_timer := 0.0
 var rng := RandomNumberGenerator.new()
 
 func setup(game_world: Node) -> void:
@@ -19,6 +20,41 @@ func setup(game_world: Node) -> void:
 	_build_menu()
 	_play_ambience()
 	_play_menu_theme()
+
+func _process(delta: float) -> void:
+	if not started or world == null:
+		return
+	var character := world.get("character") as CharacterBody3D
+	if character == null:
+		return
+	footstep_timer -= delta
+	if bool(character.get("moving")) and character.is_on_floor() and footstep_timer <= 0.0:
+		footstep_timer = 0.42 if Input.is_key_pressed(KEY_SHIFT) else 0.58
+		ui_player.stream = _make_footstep()
+		ui_player.play()
+
+func _make_footstep() -> AudioStreamWAV:
+	const RATE := 22050
+	const DURATION := 0.16
+	var samples := int(RATE * DURATION)
+	var wav := AudioStreamWAV.new()
+	wav.format = AudioStreamWAV.FORMAT_16_BITS
+	wav.mix_rate = RATE
+	wav.stereo = false
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	var lowpass := 0.0
+	for i in range(samples):
+		var t := float(i) / RATE
+		var envelope := exp(-t * 24.0) * (1.0 - exp(-t * 90.0))
+		var noise := rng.randf_range(-1.0, 1.0)
+		lowpass = lowpass * 0.78 + noise * 0.22
+		var crunch := noise * 0.20 + lowpass * 0.32
+		var thud := sin(TAU * (78.0 - 28.0 * t / DURATION) * t) * 0.20
+		var sample := (crunch + thud) * envelope
+		data.encode_s16(i * 2, int(clampf(sample, -0.9, 0.9) * 32767.0))
+	wav.data = data
+	return wav
 
 func _build_audio() -> void:
 	ambience_player = AudioStreamPlayer.new()
@@ -211,14 +247,15 @@ func _build_menu() -> void:
 
 	menu_root.modulate.a = 0.0
 	menu_root.scale = Vector2(0.96, 0.96)
+	menu_root.pivot_offset = get_viewport_rect().size * 0.5
 	var intro := create_tween().set_parallel(true)
 	intro.tween_property(menu_root, "modulate:a", 1.0, 0.8)
 	intro.tween_property(menu_root, "scale", Vector2.ONE, 0.9).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	title_label.position.y = 8.0
+	title_label.pivot_offset = title_label.size * 0.5
 	var title_tween := create_tween()
 	title_tween.set_loops()
-	title_tween.tween_property(title_label, "position:y", -3.0, 2.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	title_tween.tween_property(title_label, "position:y", 8.0, 2.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	title_tween.tween_property(title_label, "scale", Vector2(1.025, 1.025), 2.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	title_tween.tween_property(title_label, "scale", Vector2.ONE, 2.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _add_button(parent: VBoxContainer, text_value: String, callback: Callable, primary: bool) -> void:
 	var button := Button.new()
