@@ -29,12 +29,14 @@ func _process(delta:float)->void:
   frame=int(anim_time*2.0)%2
  _draw_frame(frame)
 func _physics_process(_delta:float)->void:
- var input:=Vector2(Input.get_action_strength("ui_right")-Input.get_action_strength("ui_left"),Input.get_action_strength("ui_down")-Input.get_action_strength("ui_up"))
- moving=input.length()>0.08
- sneak=Input.is_key_pressed(KEY_SHIFT)
- var speed:=1.0 if sneak else 2.2
- velocity.x=input.normalized().x*speed
- velocity.z=input.normalized().y*speed
+ var horizontal:=float(Input.is_key_pressed(KEY_D))-float(Input.is_key_pressed(KEY_A))
+ var crouching:=Input.is_key_pressed(KEY_CTRL)
+ var running:=Input.is_key_pressed(KEY_SHIFT) and not crouching
+ moving=absf(horizontal)>0.01
+ sneak=crouching
+ var speed:=1.0 if crouching else (4.0 if running else 2.2)
+ velocity.x=horizontal*speed
+ velocity.z=0.0
  move_and_slide()
 func _draw_frame(index:int)->void:
  var image:=Image.create(W,H,false,Image.FORMAT_RGBA8)
