@@ -34,9 +34,12 @@ jobs:
           "$GODOT_BIN" --headless --path . --export-release "Windows Desktop" build/PIXELBOUND.exe 2>&1 | tee export.log
           ! grep -E "ERROR:|Export failed|Failed to" export.log
           test -s build/PIXELBOUND.exe
+          test -s build/PIXELBOUND.pck
           test "$(stat -c%s build/PIXELBOUND.exe)" -gt 1000000
       - uses: actions/upload-artifact@v4
         with:
           name: PIXELBOUND-Windows
-          path: build/PIXELBOUND.exe
+          path: |
+            build/PIXELBOUND.exe
+            build/PIXELBOUND.pck
           if-no-files-found: error
