@@ -3,7 +3,7 @@ extends Node3D
 @onready var character: CharacterBody3D = $Character
 @onready var camera: Camera3D = $Camera3D
 
-const WORLD_HALF := 120.0
+const WORLD_HALF := 405.0
 const PATH_WIDTH := 2.2
 const PATH_STEP := 1.25
 
@@ -148,7 +148,7 @@ func _build_tree_population() -> void:
 		crowns.append(crown_batch.multimesh)
 	var trunk_transforms := [[], [], [], []]
 	var crown_transforms := [[], [], [], []]
-	for n in range(1500):
+	for n in range(15000):
 		var x := rng.randf_range(-WORLD_HALF, WORLD_HALF)
 		var z := rng.randf_range(-WORLD_HALF, WORLD_HALF)
 		var point := Vector3(x, 0.0, z)
