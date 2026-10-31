@@ -284,8 +284,7 @@ func _build_long_trail() -> void:
 			var side := Vector2(-direction.y, direction.x)
 			point.x += side.x * sin(t * PI) * 1.4
 			point.z += side.y * sin(t * PI) * 1.4
-			path_points.append(point)
-		_register_path_point(point)
+				path_points.append(point)
 			_register_path_point(point)
 			var tile := MeshInstance3D.new()
 			var tile_mesh := BoxMesh.new()
@@ -331,6 +330,7 @@ func _build_remote_trail(start: Vector3, finish: Vector3) -> void:
 		tile.rotation.y = atan2(direction.x, direction.y)
 		add_child(tile)
 		path_points.append(point)
+		_register_path_point(point)
 
 func _build_crystal_quarry(pos: Vector3) -> void:
 	var rock := _mat(Color("#4c5664"))
