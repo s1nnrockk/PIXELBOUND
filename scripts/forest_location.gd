@@ -7,7 +7,8 @@ const WORLD_HALF := 1280.0
 const PATH_WIDTH := 2.2
 const PATH_STEP := 1.25
 
-var camera_origin := Vector3(0.0, 8.5, 9.5)
+var camera_origin := Vector3(0.0, 4.8, 8.5)
+var intro_label: Label
 var parallax_layers: Array[Node3D] = []
 var path_points: Array[Vector3] = []
 var rng := RandomNumberGenerator.new()
@@ -26,24 +27,68 @@ var path_edge_material: StandardMaterial3D
 
 func _ready() -> void:
 	rng.seed = 9042026
+	character.global_position = Vector3(-4.45, 0.0, -5.1)
+	character.controls_enabled = false
 	_build_forest()
-	camera.position = camera_origin
-	camera.rotation = Vector3(-0.68, 0.0, 0.0)
-	camera.size = 11.0
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.size = 5.8
 	camera.current = true
+	camera.global_position = character.global_position + camera_origin
+	camera.look_at(character.global_position + Vector3(0.0, 0.9, 0.0), Vector3.UP)
+	_build_intro_caption()
+	_play_house_exit()
 
 func _process(delta: float) -> void:
 	damage_cooldown = maxf(0.0, damage_cooldown - delta)
 	_update_health_gameplay(delta)
 	var target := character.global_position
-	var desired := Vector3(target.x * 0.72, camera_origin.y, target.z * 0.72 + camera_origin.z)
-	camera.position = camera.position.lerp(desired, 1.0 - exp(-delta * 2.4))
+	var desired := Vector3(target.x, camera_origin.y, target.z + camera_origin.z)
+	camera.global_position = camera.global_position.lerp(desired, 1.0 - exp(-delta * 3.2))
+	camera.look_at(target + Vector3(0.0, 0.9, 0.0), Vector3.UP)
 	for i in range(parallax_layers.size()):
 		var layer := parallax_layers[i]
 		var factor := 0.12 + float(i) * 0.12
 		layer.position.x = -target.x * factor
 		layer.position.z = -target.z * factor * 0.35
+
+func _build_intro_caption() -> void:
+	var layer := CanvasLayer.new()
+	layer.name = "IntroCaption"
+	add_child(layer)
+	intro_label = Label.new()
+	intro_label.text = "PIXELBOUND  |  A NEW JOURNEY"
+	intro_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	intro_label.anchor_left = 0.0
+	intro_label.anchor_right = 1.0
+	intro_label.anchor_top = 0.78
+	intro_label.anchor_bottom = 0.92
+	intro_label.add_theme_font_size_override("font_size", 24)
+	intro_label.add_theme_color_override("font_color", Color("#f4dfbd"))
+	intro_label.add_theme_color_override("font_shadow_color", Color("#171b24"))
+	intro_label.add_theme_constant_override("shadow_offset_x", 2)
+	intro_label.add_theme_constant_override("shadow_offset_y", 2)
+	layer.add_child(intro_label)
+	intro_label.modulate.a = 0.0
+	var fade := create_tween()
+	fade.tween_property(intro_label, "modulate:a", 1.0, 0.8)
+	fade.tween_interval(2.0)
+	fade.tween_property(intro_label, "modulate:a", 0.0, 1.0)
+
+func _play_house_exit() -> void:
+	await get_tree().create_timer(0.7).timeout
+	var walk := create_tween()
+	walk.set_trans(Tween.TRANS_SINE)
+	walk.set_ease(Tween.EASE_IN_OUT)
+	walk.tween_property(character, "global_position", Vector3(-4.45, 0.0, -1.65), 2.6)
+	await walk.finished
+	var zoom := create_tween()
+	zoom.set_trans(Tween.TRANS_SINE)
+	zoom.set_ease(Tween.EASE_OUT)
+	zoom.tween_property(camera, "size", 7.6, 1.1)
+	await zoom.finished
+	character.controls_enabled = true
+	if is_instance_valid(intro_label):
+		intro_label.queue_free()
 
 func _build_forest() -> void:
 	grass_material = _mat(Color("#243d32"))
