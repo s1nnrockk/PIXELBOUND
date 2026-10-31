@@ -3,7 +3,7 @@ extends Node3D
 @onready var character: CharacterBody3D = $Character
 @onready var camera: Camera3D = $Camera3D
 
-const WORLD_HALF := 405.0
+const WORLD_HALF := 1280.0
 const PATH_WIDTH := 2.2
 const PATH_STEP := 1.25
 
