@@ -3,10 +3,21 @@ extends Node3D
 @onready var character: CharacterBody3D = $Character
 @onready var camera: Camera3D = $Camera3D
 
+const WORLD_HALF := 120.0
+const PATH_WIDTH := 2.2
+const PATH_STEP := 1.25
+
 var camera_origin := Vector3(0.0, 8.5, 9.5)
 var parallax_layers: Array[Node3D] = []
+var path_points: Array[Vector3] = []
+var rng := RandomNumberGenerator.new()
+
+var grass_material: StandardMaterial3D
+var path_material: StandardMaterial3D
+var path_edge_material: StandardMaterial3D
 
 func _ready() -> void:
+	rng.seed = 9042026
 	_build_forest()
 	camera.position = camera_origin
 	camera.rotation = Vector3(-0.68, 0.0, 0.0)
@@ -25,75 +36,243 @@ func _process(delta: float) -> void:
 		layer.position.z = -target.z * factor * 0.35
 
 func _build_forest() -> void:
-	var ground_mat := _mat(Color("#243d32"), 1.0)
+	grass_material = _mat(Color("#243d32"))
+	path_material = _mat(Color("#796044"))
+	path_edge_material = _mat(Color("#a18a61"))
+	_add_ground()
+	_build_long_trail()
+	_build_house(Vector3(-5.0, 0.0, -5.0))
+	_build_lake_and_bridge(Vector3(42.0, 0.0, -30.0))
+	_build_ruins(Vector3(-54.0, 0.0, -62.0))
+	_build_watchtower(Vector3(62.0, 0.0, 48.0))
+	_build_camp(Vector3(-48.0, 0.0, 52.0))
+	_build_mushroom_glade(Vector3(18.0, 0.0, 72.0))
+	_build_tree_population()
+	_build_npc(Vector3(2.0, 0.0, -1.0), Color("#d18b55"), Color("#4c6b8b"))
+	_build_npc(Vector3(-1.0, 0.0, 2.5), Color("#c7a56b"), Color("#6b4d76"))
+	_build_npc(Vector3(39.0, 0.0, -26.0), Color("#c99b7a"), Color("#536f58"))
+	_build_npc(Vector3(-51.0, 0.0, -59.0), Color("#b7a0d2"), Color("#8a553f"))
+	_build_lantern(Vector3(0.8, 0.0, -2.4))
+	_build_lantern(Vector3(-0.8, 0.0, 3.4))
+	_build_parallax_horizon()
+
+func _add_ground() -> void:
 	var ground := MeshInstance3D.new()
-	var ground_mesh := PlaneMesh.new()
-	ground_mesh.size = Vector2(36.0, 36.0)
-	ground.mesh = ground_mesh
-	ground.material_override = ground_mat
+	var mesh := PlaneMesh.new()
+	mesh.size = Vector2(WORLD_HALF * 2.0 + 40.0, WORLD_HALF * 2.0 + 40.0)
+	ground.mesh = mesh
+	ground.material_override = grass_material
 	ground.position.y = -0.12
 	add_child(ground)
 
-	_build_path()
-	_build_house(Vector3(-3.6, 0.0, -3.4))
-	_build_tree_ring()
-	_build_background_layer(-1, Color("#172d2b"), -14.0)
-	_build_background_layer(-2, Color("#203b35"), -10.0)
-	_build_npc(Vector3(2.2, 0.0, -1.0), Color("#d18b55"), Color("#4c6b8b"))
-	_build_npc(Vector3(-1.1, 0.0, 2.5), Color("#c7a56b"), Color("#6b4d76"))
-	_build_lantern(Vector3(0.8, 0.0, -2.4))
-	_build_lantern(Vector3(-0.8, 0.0, 3.4))
-
-func _build_path() -> void:
-	var path_mat := _mat(Color("#796044"))
-	var edge_mat := _mat(Color("#a18a61"))
-	for i in range(24):
-		var z := 8.0 - float(i) * 0.72
-		var width := 1.35 + 0.22 * sin(float(i) * 0.6)
-		_box("PathTile", Vector3(0.0, -0.045, z), Vector3(width, 0.035, 0.78), path_mat)
-		if i % 3 == 0:
-			_box("PathHighlight", Vector3(-width * 0.22, -0.022, z - 0.12), Vector3(0.16, 0.012, 0.12), edge_mat)
-
-func _build_tree_ring() -> void:
-	var positions := [
-		Vector3(-6.0, 0.0, -5.0), Vector3(-7.5, 0.0, -1.0),
-		Vector3(-6.8, 0.0, 3.4), Vector3(-5.2, 0.0, 6.0),
-		Vector3(5.8, 0.0, -5.8), Vector3(7.0, 0.0, -2.4),
-		Vector3(6.4, 0.0, 1.8), Vector3(5.5, 0.0, 5.8),
-		Vector3(-3.5, 0.0, -7.5), Vector3(0.0, 0.0, -8.2),
-		Vector3(3.5, 0.0, -7.6)
+func _build_long_trail() -> void:
+	var waypoints := [
+		Vector3(-5.0, 0.0, -5.0),
+		Vector3(4.0, 0.0, -18.0),
+		Vector3(20.0, 0.0, -26.0),
+		Vector3(42.0, 0.0, -30.0),
+		Vector3(55.0, 0.0, -12.0),
+		Vector3(38.0, 0.0, 8.0),
+		Vector3(14.0, 0.0, 20.0),
+		Vector3(-12.0, 0.0, 30.0),
+		Vector3(-34.0, 0.0, 42.0),
+		Vector3(-48.0, 0.0, 52.0),
+		Vector3(-32.0, 0.0, 70.0),
+		Vector3(-6.0, 0.0, 82.0),
+		Vector3(18.0, 0.0, 72.0),
+		Vector3(40.0, 0.0, 58.0),
+		Vector3(62.0, 0.0, 48.0),
+		Vector3(78.0, 0.0, 28.0),
+		Vector3(70.0, 0.0, 4.0),
+		Vector3(54.0, 0.0, -18.0),
+		Vector3(42.0, 0.0, -30.0)
 	]
-	for i in range(positions.size()):
-		_build_tree(positions[i], i)
+	for segment in range(waypoints.size() - 1):
+		var a := waypoints[segment]
+		var b := waypoints[segment + 1]
+		var length := Vector2(b.x - a.x, b.z - a.z).length()
+		var steps := maxi(1, int(ceil(length / PATH_STEP)))
+		for step in range(steps):
+			var t := float(step) / float(steps)
+			var point := a.lerp(b, t)
+			var direction := Vector2(b.x - a.x, b.z - a.z).normalized()
+			var side := Vector2(-direction.y, direction.x)
+			point.x += side.x * sin(t * PI) * 1.4
+			point.z += side.y * sin(t * PI) * 1.4
+			path_points.append(point)
+			var tile := MeshInstance3D.new()
+			var tile_mesh := BoxMesh.new()
+			tile_mesh.size = Vector3(PATH_WIDTH + rng.randf_range(-0.12, 0.18), 0.045, PATH_STEP + 0.12)
+			tile.mesh = tile_mesh
+			tile.material_override = path_material if rng.randf() > 0.16 else path_edge_material
+			tile.position = Vector3(point.x, -0.035, point.z)
+			tile.rotation.y = atan2(direction.x, direction.y)
+			add_child(tile)
+			if step % 5 == 0:
+				_add_path_stone(point, side)
 
-func _build_tree(pos: Vector3, seed: int) -> void:
-	var trunk_mat := _mat(Color("#49372e"))
-	var foliage_a := _mat(Color("#254d3b"))
-	var foliage_b := _mat(Color("#316447"))
-	var foliage_c := _mat(Color("#47734b"))
-	_box("TreeTrunk", pos + Vector3(0.0, 0.55, 0.0), Vector3(0.28, 1.1, 0.28), trunk_mat)
-	for tier in range(3):
-		var y := 1.15 + float(tier) * 0.52
-		var size := 1.55 - float(tier) * 0.34
-		var offset := Vector3(0.0, y, 0.0)
-		_box("PineFoliage", pos + offset, Vector3(size, 0.68, size), foliage_a if tier == 0 else foliage_b)
-		_box("FoliagePixel", pos + offset + Vector3(0.0, 0.16, -size * 0.18), Vector3(size * 0.62, 0.24, size * 0.62), foliage_c)
-	if seed % 2 == 0:
-		_box("Moss", pos + Vector3(0.32, 0.06, 0.1), Vector3(0.55, 0.12, 0.42), _mat(Color("#58734a")))
+func _add_path_stone(point: Vector3, side: Vector2) -> void:
+	var offset := rng.randf_range(1.5, 2.8) * (1.0 if rng.randf() > 0.5 else -1.0)
+	var stone := _box_mesh("TrailStone", Vector3(point.x + side.x * offset, 0.06, point.z + side.y * offset), Vector3(rng.randf_range(0.18, 0.42), 0.12, rng.randf_range(0.18, 0.38)), _mat(Color("#526052")))
+
+func _build_tree_population() -> void:
+	var species := [
+		{"trunk": Color("#49372e"), "crown": Color("#254d3b"), "height": 3.6, "width": 2.1, "kind": 0},
+		{"trunk": Color("#584233"), "crown": Color("#356044"), "height": 2.8, "width": 2.8, "kind": 1},
+		{"trunk": Color("#3d342d"), "crown": Color("#41694a"), "height": 4.4, "width": 1.8, "kind": 2},
+		{"trunk": Color("#66513a"), "crown": Color("#5b7545"), "height": 2.4, "width": 2.4, "kind": 3}
+	]
+	var trunk_meshes: Array[Mesh] = []
+	var crown_meshes: Array[Mesh] = []
+	var trunk_mats: Array[Material] = []
+	var crown_mats: Array[Material] = []
+	for data in species:
+		var trunk := BoxMesh.new()
+		trunk.size = Vector3(0.32, float(data.height) * 0.42, 0.32)
+		trunk_meshes.append(trunk)
+		var crown := BoxMesh.new()
+		crown.size = Vector3(float(data.width), float(data.height) * 0.52, float(data.width))
+		crown_meshes.append(crown)
+		trunk_mats.append(_mat(data.trunk))
+		crown_mats.append(_mat(data.crown))
+	var trunk_batches: Array[MultiMeshInstance3D] = []
+	var crown_batches: Array[MultiMeshInstance3D] = []
+	var trunks: Array[MultiMesh] = []
+	var crowns: Array[MultiMesh] = []
+	for i in range(species.size()):
+		var trunk_batch := _new_multimesh(trunk_meshes[i], trunk_mats[i], "TreeTrunks_%d" % i)
+		var crown_batch := _new_multimesh(crown_meshes[i], crown_mats[i], "TreeCanopies_%d" % i)
+		trunk_batches.append(trunk_batch)
+		crown_batches.append(crown_batch)
+		trunks.append(trunk_batch.multimesh)
+		crowns.append(crown_batch.multimesh)
+	var counts := [0, 0, 0, 0]
+	for n in range(1500):
+		var x := rng.randf_range(-WORLD_HALF, WORLD_HALF)
+		var z := rng.randf_range(-WORLD_HALF, WORLD_HALF)
+		if _near_path(Vector3(x, 0.0, z), 4.5) or _near_landmark(Vector3(x, 0.0, z), 10.0):
+			continue
+		var species_index := rng.randi_range(0, species.size() - 1)
+		var data: Dictionary = species[species_index]
+		var scale := rng.randf_range(0.72, 1.38)
+		var height := float(data.height) * scale
+		var yaw := rng.randf_range(0.0, TAU)
+		var trunk_transform := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(scale, scale, scale)), Vector3(x, height * 0.21, z))
+		var crown_transform := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(scale, scale, scale)), Vector3(x, height * 0.68, z))
+		trunks[species_index].instance_count += 1
+		crowns[species_index].instance_count += 1
+		trunks[species_index].set_instance_transform(counts[species_index], trunk_transform)
+		crowns[species_index].set_instance_transform(counts[species_index], crown_transform)
+		counts[species_index] += 1
+
+func _new_multimesh(mesh: Mesh, material: Material, node_name: String) -> MultiMeshInstance3D:
+	var multi := MultiMesh.new()
+	multi.transform_format = MultiMesh.TRANSFORM_3D
+	multi.mesh = mesh
+	multi.instance_count = 0
+	var instance := MultiMeshInstance3D.new()
+	instance.name = node_name
+	instance.multimesh = multi
+	instance.material_override = material
+	add_child(instance)
+	return instance
+
+func _near_path(point: Vector3, margin: float) -> bool:
+	for path_point in path_points:
+		if Vector2(point.x - path_point.x, point.z - path_point.z).length() < margin:
+			return true
+	return false
+
+func _near_landmark(point: Vector3, margin: float) -> bool:
+	var landmarks := [
+		Vector3(-5.0, 0.0, -5.0), Vector3(42.0, 0.0, -30.0),
+		Vector3(-54.0, 0.0, -62.0), Vector3(62.0, 0.0, 48.0),
+		Vector3(-48.0, 0.0, 52.0), Vector3(18.0, 0.0, 72.0)
+	]
+	for landmark in landmarks:
+		if Vector2(point.x - landmark.x, point.z - landmark.z).length() < margin:
+			return true
+	return false
 
 func _build_house(pos: Vector3) -> void:
 	var wall := _mat(Color("#8b6548"))
 	var roof := _mat(Color("#4b3540"))
 	var dark := _mat(Color("#392a2c"))
 	var window := _mat(Color("#f4bd68"), 0.25)
-	_box("CabinBody", pos + Vector3(0.0, 0.8, 0.0), Vector3(2.8, 1.6, 2.1), wall)
-	_box("CabinRoof", pos + Vector3(0.0, 1.85, 0.0), Vector3(3.25, 0.38, 2.5), roof)
-	_box("RoofRidge", pos + Vector3(0.0, 2.12, 0.0), Vector3(0.22, 0.22, 2.55), dark)
-	_box("Door", pos + Vector3(0.55, 0.52, 1.07), Vector3(0.58, 1.04, 0.08), dark)
-	_box("WindowLeft", pos + Vector3(-0.72, 1.02, 1.08), Vector3(0.48, 0.48, 0.08), window)
-	_box("WindowRight", pos + Vector3(1.12, 1.02, 1.08), Vector3(0.48, 0.48, 0.08), window)
-	_box("WindowCross", pos + Vector3(-0.72, 1.02, 1.14), Vector3(0.06, 0.52, 0.04), dark)
-	_box("Chimney", pos + Vector3(-0.9, 2.25, -0.45), Vector3(0.34, 0.9, 0.36), _mat(Color("#57444a")))
+	_box_mesh("CabinBody", pos + Vector3(0.0, 0.8, 0.0), Vector3(2.8, 1.6, 2.1), wall)
+	_box_mesh("CabinRoof", pos + Vector3(0.0, 1.85, 0.0), Vector3(3.25, 0.38, 2.5), roof)
+	_box_mesh("RoofRidge", pos + Vector3(0.0, 2.12, 0.0), Vector3(0.22, 0.22, 2.55), dark)
+	_box_mesh("Door", pos + Vector3(0.55, 0.52, 1.07), Vector3(0.58, 1.04, 0.08), dark)
+	_box_mesh("WindowLeft", pos + Vector3(-0.72, 1.02, 1.08), Vector3(0.48, 0.48, 0.08), window)
+	_box_mesh("WindowRight", pos + Vector3(1.12, 1.02, 1.08), Vector3(0.48, 0.48, 0.08), window)
+	_box_mesh("Chimney", pos + Vector3(-0.9, 2.25, -0.45), Vector3(0.34, 0.9, 0.36), _mat(Color("#57444a")))
+	_box_mesh("Porch", pos + Vector3(0.0, 0.12, 1.45), Vector3(3.1, 0.18, 0.8), _mat(Color("#6e503b")))
+
+func _build_lake_and_bridge(pos: Vector3) -> void:
+	var water := _mat(Color("#294e59"), 0.18)
+	var lake := MeshInstance3D.new()
+	var lake_mesh := CylinderMesh.new()
+	lake_mesh.top_radius = 10.5
+	lake_mesh.bottom_radius = 10.5
+	lake_mesh.height = 0.08
+	lake.mesh = lake_mesh
+	lake.material_override = water
+	lake.position = pos + Vector3(0.0, -0.02, 0.0)
+	add_child(lake)
+	for i in range(13):
+		var x := -6.0 + float(i) * 1.0
+		_box_mesh("BridgePlank", pos + Vector3(x, 0.12, 0.0), Vector3(0.9, 0.16, 2.6), _mat(Color("#76563c")))
+	for side in [-1.0, 1.0]:
+		for i in range(5):
+			var x := -5.0 + float(i) * 2.5
+			_box_mesh("BridgeRail", pos + Vector3(x, 0.62, side * 1.15), Vector3(0.12, 0.9, 0.12), _mat(Color("#49372e")))
+		_box_mesh("BridgeHandrail", pos + Vector3(0.0, 1.0, side * 1.15), Vector3(11.0, 0.12, 0.12), _mat(Color("#49372e")))
+	for i in range(28):
+		var angle := TAU * float(i) / 28.0
+		var rock_pos := pos + Vector3(cos(angle) * 10.8, 0.08, sin(angle) * 10.8)
+		_box_mesh("LakesideRock", rock_pos, Vector3(rng.randf_range(0.4, 1.0), 0.3, 0.5), _mat(Color("#58645a")))
+
+func _build_ruins(pos: Vector3) -> void:
+	var stone := _mat(Color("#646b68"))
+	var moss := _mat(Color("#3e6347"))
+	for i in range(7):
+		var angle := TAU * float(i) / 7.0
+		var p := pos + Vector3(cos(angle) * 4.8, 1.2, sin(angle) * 4.8)
+		_box_mesh("RuinedPillar", p, Vector3(0.8, 2.4 + rng.randf_range(-0.8, 0.5), 0.8), stone)
+		_box_mesh("PillarMoss", p + Vector3(0.0, 0.7, 0.42), Vector3(0.84, 0.36, 0.12), moss)
+	_box_mesh("BrokenAltar", pos + Vector3(0.0, 0.45, 0.0), Vector3(2.6, 0.9, 1.6), stone)
+	_box_mesh("RuneStone", pos + Vector3(0.0, 1.1, 0.0), Vector3(0.7, 1.2, 0.25), _mat(Color("#83b8a0"), 0.4))
+
+func _build_watchtower(pos: Vector3) -> void:
+	var wood := _mat(Color("#654631"))
+	var roof := _mat(Color("#493a42"))
+	for x in [-1.2, 1.2]:
+		for z in [-1.2, 1.2]:
+			_box_mesh("TowerLeg", pos + Vector3(x, 3.0, z), Vector3(0.24, 6.0, 0.24), wood)
+	_box_mesh("TowerDeck", pos + Vector3(0.0, 4.8, 0.0), Vector3(3.4, 0.3, 3.4), wood)
+	_box_mesh("TowerRoof", pos + Vector3(0.0, 6.4, 0.0), Vector3(4.0, 0.4, 4.0), roof)
+	for y in [5.4, 6.0]:
+		_box_mesh("TowerRailFront", pos + Vector3(0.0, y, 1.5), Vector3(3.2, 0.12, 0.12), wood)
+		_box_mesh("TowerRailBack", pos + Vector3(0.0, y, -1.5), Vector3(3.2, 0.12, 0.12), wood)
+
+func _build_camp(pos: Vector3) -> void:
+	_box_mesh("CampfireStone", pos + Vector3(0.0, 0.08, 0.0), Vector3(1.5, 0.16, 1.5), _mat(Color("#65594a")))
+	_box_mesh("CampfireEmbers", pos + Vector3(0.0, 0.2, 0.0), Vector3(0.6, 0.18, 0.6), _mat(Color("#ff8b45"), 1.2))
+	_box_mesh("Tent", pos + Vector3(3.0, 1.0, 0.0), Vector3(3.2, 2.0, 2.8), _mat(Color("#8b6847")))
+	_box_mesh("TentDoor", pos + Vector3(3.0, 0.65, 1.42), Vector3(1.0, 1.3, 0.08), _mat(Color("#49382e")))
+	for i in range(6):
+		var angle := TAU * float(i) / 6.0
+		_box_mesh("CampLog", pos + Vector3(cos(angle) * 1.2, 0.16, sin(angle) * 1.2), Vector3(0.9, 0.25, 0.28), _mat(Color("#73543b")))
+
+func _build_mushroom_glade(pos: Vector3) -> void:
+	var grass := _mat(Color("#527447"))
+	_box_mesh("GladePatch", pos + Vector3(0.0, -0.02, 0.0), Vector3(14.0, 0.04, 12.0), grass)
+	for i in range(42):
+		var x := rng.randf_range(-6.0, 6.0)
+		var z := rng.randf_range(-5.0, 5.0)
+		var stem_height := rng.randf_range(0.18, 0.42)
+		_box_mesh("MushroomStem", pos + Vector3(x, stem_height * 0.5, z), Vector3(0.12, stem_height, 0.12), _mat(Color("#e4d8b4")))
+		_box_mesh("MushroomCap", pos + Vector3(x, stem_height + 0.08, z), Vector3(rng.randf_range(0.28, 0.48), 0.16, rng.randf_range(0.28, 0.48)), _mat(Color("#bd6c78") if i % 2 == 0 else Color("#d8a65c"), 0.12))
 
 func _build_npc(pos: Vector3, skin: Color, clothes: Color) -> void:
 	var sprite := Sprite3D.new()
@@ -126,35 +305,37 @@ func _pixel_rect(image: Image, x: int, y: int, w: int, h: int, color: Color) -> 
 			image.set_pixel(px, py, color)
 
 func _build_lantern(pos: Vector3) -> void:
-	_box("LanternPost", pos + Vector3(0.0, 0.55, 0.0), Vector3(0.08, 1.1, 0.08), _mat(Color("#4a3931")))
-	_box("LanternGlow", pos + Vector3(0.0, 1.12, 0.0), Vector3(0.28, 0.3, 0.28), _mat(Color("#ffc56b"), 0.2))
+	_box_mesh("LanternPost", pos + Vector3(0.0, 0.55, 0.0), Vector3(0.08, 1.1, 0.08), _mat(Color("#4a3931")))
+	_box_mesh("LanternGlow", pos + Vector3(0.0, 1.12, 0.0), Vector3(0.28, 0.3, 0.28), _mat(Color("#ffc56b"), 0.2))
 
-func _build_background_layer(index: int, color: Color, z: float) -> void:
+func _build_parallax_horizon() -> void:
+	_build_background_layer(-1, Color("#172d2b"), -150.0, 80.0)
+	_build_background_layer(-2, Color("#203b35"), -115.0, 100.0)
+
+func _build_background_layer(index: int, color: Color, z: float, span: float) -> void:
 	var layer := Node3D.new()
 	layer.name = "ParallaxForest%d" % abs(index)
 	layer.position.z = z
 	add_child(layer)
 	parallax_layers.append(layer)
 	var material := _mat(color)
-	for i in range(13):
-		var x := -12.0 + float(i) * 2.0
-		var h := 2.2 + float((i * 7 + abs(index)) % 4) * 0.55
-		var trunk := MeshInstance3D.new()
-		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.28, h, 0.3)
-		trunk.mesh = mesh
-		trunk.material_override = material
-		trunk.position = Vector3(x, h * 0.5, 0.0)
-		layer.add_child(trunk)
-		var crown := MeshInstance3D.new()
-		var crown_mesh := BoxMesh.new()
-		crown_mesh.size = Vector3(1.5, 1.4, 0.6)
-		crown.mesh = crown_mesh
-		crown.material_override = material
-		crown.position = Vector3(x, h + 0.3, 0.0)
-		layer.add_child(crown)
+	for i in range(61):
+		var x := -span + float(i) * (span * 2.0 / 60.0)
+		var h := 8.0 + float((i * 7 + abs(index)) % 7) * 1.4
+		_box_mesh_parent(layer, "FarTreeTrunk", Vector3(x, h * 0.5, 0.0), Vector3(1.0, h, 1.0), material)
+		_box_mesh_parent(layer, "FarTreeCrown", Vector3(x, h + 1.0, 0.0), Vector3(5.0, 4.0, 1.0), material)
 
-func _box(node_name: String, pos: Vector3, dimensions: Vector3, material: Material) -> void:
+func _box_mesh_parent(parent: Node3D, node_name: String, pos: Vector3, dimensions: Vector3, material: Material) -> void:
+	var instance := MeshInstance3D.new()
+	instance.name = node_name
+	var mesh := BoxMesh.new()
+	mesh.size = dimensions
+	instance.mesh = mesh
+	instance.material_override = material
+	instance.position = pos
+	parent.add_child(instance)
+
+func _box_mesh(node_name: String, pos: Vector3, dimensions: Vector3, material: Material) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
 	instance.name = node_name
 	var mesh := BoxMesh.new()
@@ -163,6 +344,7 @@ func _box(node_name: String, pos: Vector3, dimensions: Vector3, material: Materi
 	instance.material_override = material
 	instance.position = pos
 	add_child(instance)
+	return instance
 
 func _mat(color: Color, emission: float = 0.0) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
