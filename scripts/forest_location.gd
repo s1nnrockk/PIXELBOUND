@@ -146,24 +146,27 @@ func _build_tree_population() -> void:
 		crown_batches.append(crown_batch)
 		trunks.append(trunk_batch.multimesh)
 		crowns.append(crown_batch.multimesh)
-	var counts := [0, 0, 0, 0]
+	var trunk_transforms := [[], [], [], []]
+	var crown_transforms := [[], [], [], []]
 	for n in range(1500):
 		var x := rng.randf_range(-WORLD_HALF, WORLD_HALF)
 		var z := rng.randf_range(-WORLD_HALF, WORLD_HALF)
-		if _near_path(Vector3(x, 0.0, z), 4.5) or _near_landmark(Vector3(x, 0.0, z), 10.0):
+		var point := Vector3(x, 0.0, z)
+		if _near_path(point, 4.5) or _near_landmark(point, 10.0):
 			continue
 		var species_index := rng.randi_range(0, species.size() - 1)
 		var data: Dictionary = species[species_index]
 		var scale := rng.randf_range(0.72, 1.38)
 		var height := float(data.height) * scale
 		var yaw := rng.randf_range(0.0, TAU)
-		var trunk_transform := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(scale, scale, scale)), Vector3(x, height * 0.21, z))
-		var crown_transform := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(scale, scale, scale)), Vector3(x, height * 0.68, z))
-		trunks[species_index].instance_count += 1
-		crowns[species_index].instance_count += 1
-		trunks[species_index].set_instance_transform(counts[species_index], trunk_transform)
-		crowns[species_index].set_instance_transform(counts[species_index], crown_transform)
-		counts[species_index] += 1
+		trunk_transforms[species_index].append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(scale, scale, scale)), Vector3(x, height * 0.21, z)))
+		crown_transforms[species_index].append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(scale, scale, scale)), Vector3(x, height * 0.68, z)))
+	for species_index in range(species.size()):
+		trunks[species_index].instance_count = trunk_transforms[species_index].size()
+		crowns[species_index].instance_count = crown_transforms[species_index].size()
+		for instance_index in range(trunk_transforms[species_index].size()):
+			trunks[species_index].set_instance_transform(instance_index, trunk_transforms[species_index][instance_index])
+			crowns[species_index].set_instance_transform(instance_index, crown_transforms[species_index][instance_index])
 
 func _new_multimesh(mesh: Mesh, material: Material, node_name: String) -> MultiMeshInstance3D:
 	var multi := MultiMesh.new()
